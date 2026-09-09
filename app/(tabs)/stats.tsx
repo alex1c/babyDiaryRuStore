@@ -11,7 +11,7 @@ import {
 	Text,
 	View,
 } from 'react-native'
-import { useFocusEffect } from 'expo-router'
+import { Link, useFocusEffect, type Href } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { BannerAdSlot } from '@/src/components/BannerAdSlot'
@@ -188,6 +188,22 @@ export default function StatsScreen () {
 						Недостаточно данных за этот период
 					</Text>
 				)}
+
+				<Link href={'/reports' as Href} asChild>
+					<Pressable
+						style={[
+							styles.exportLink,
+							{ backgroundColor: colors.surface, borderColor: colors.border },
+						]}
+					>
+						<Text style={{ color: colors.text, ...typography.subtitle }}>
+							Отчёты и экспорт
+						</Text>
+						<Text style={{ color: colors.textSecondary, ...typography.caption }}>
+							Сводка, PDF и первый год
+						</Text>
+					</Pressable>
+				</Link>
 
 				<BannerAdSlot />
 			</ScrollView>
@@ -640,4 +656,10 @@ const styles = StyleSheet.create({
 	sectionBody: { paddingHorizontal: spacing.md, paddingBottom: spacing.md, gap: 4 },
 	statLine: { ...typography.body },
 	chartCaption: { ...typography.caption, marginTop: spacing.sm },
+	exportLink: {
+		borderWidth: StyleSheet.hairlineWidth,
+		borderRadius: radii.md,
+		padding: spacing.md,
+		gap: 2,
+	},
 })

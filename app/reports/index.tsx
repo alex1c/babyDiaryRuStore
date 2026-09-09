@@ -1,24 +1,24 @@
 /**
- * More tab — profile, settings, health, training.
+ * Reports hub — share summary, period PDF, first-year preview.
  */
 
 import { Link, type Href } from 'expo-router'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useAppTheme } from '@/src/theme/ThemeProvider'
 import { radii, spacing, typography } from '@/src/theme/tokens'
 
-interface MoreLinkProps {
+function HubLink ({
+	href,
+	title,
+	subtitle,
+}: {
 	href: Href
 	title: string
 	subtitle: string
-}
-
-function MoreLink ({ href, title, subtitle }: MoreLinkProps) {
+}) {
 	const { colors } = useAppTheme()
-
 	return (
 		<Link href={href} asChild>
 			<Pressable
@@ -41,9 +41,8 @@ function MoreLink ({ href, title, subtitle }: MoreLinkProps) {
 	)
 }
 
-export default function MoreScreen () {
+export default function ReportsHubScreen () {
 	const { colors } = useAppTheme()
-	const { activeChild } = useActiveChild()
 
 	return (
 		<SafeAreaView
@@ -51,34 +50,24 @@ export default function MoreScreen () {
 			edges={['left', 'right']}
 		>
 			<ScrollView contentContainerStyle={styles.content}>
-				<MoreLink
-					href={'/reports' as Href}
-					title="Отчёты и экспорт"
-					subtitle="Сводка, PDF за период и первый год"
+				<Text style={[styles.lead, { color: colors.textSecondary }]}>
+					Быстрая сводка для мессенджеров, PDF-отчёт за период и альбом
+					первого года.
+				</Text>
+				<HubLink
+					href={'/reports/share' as Href}
+					title="Поделиться сводкой"
+					subtitle="Короткий текст за сегодня, 7 или 30 дней"
 				/>
-				<MoreLink
-					href={'/health' as Href}
-					title="Здоровье"
-					subtitle="Температура, симптомы, лекарства и визиты"
+				<HubLink
+					href={'/reports/pdf' as Href}
+					title="Создать PDF"
+					subtitle="Читаемый отчёт за выбранный период"
 				/>
-				<MoreLink
-					href="/profile"
-					title="Профиль малыша"
-					subtitle={
-						activeChild
-							? activeChild.name
-							: 'Имя, дата рождения и данные при рождении'
-					}
-				/>
-				<MoreLink
-					href="/settings"
-					title="Настройки"
-					subtitle="Тема, уведомления, backup и другое"
-				/>
-				<MoreLink
-					href="/training"
-					title="Обучение"
-					subtitle="Как пользоваться дневником"
+				<HubLink
+					href={'/reports/first-year' as Href}
+					title="Первый год малыша"
+					subtitle="Месяцы 1–12: фото, рост и достижения"
 				/>
 			</ScrollView>
 		</SafeAreaView>
@@ -87,14 +76,14 @@ export default function MoreScreen () {
 
 const styles = StyleSheet.create({
 	safe: { flex: 1 },
-	content: { padding: spacing.md, paddingBottom: spacing.xl },
+	content: { padding: spacing.md, paddingBottom: spacing.xl, gap: spacing.sm },
+	lead: { ...typography.body, marginBottom: spacing.sm },
 	row: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		borderWidth: StyleSheet.hairlineWidth,
 		borderRadius: radii.md,
 		padding: spacing.md,
-		marginBottom: spacing.sm,
 		minHeight: 64,
 	},
 	rowText: { flex: 1, paddingRight: spacing.sm },

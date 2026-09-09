@@ -5,7 +5,8 @@
 import type { DateOnly } from '../models/types'
 import { toLocalDateOnly } from '../utils/datetime'
 
-export type StatsPeriodKind = '7' | '30' | '90' | 'all'
+/** Statistics chips use 7/30/90/all; reports may also use today/custom. */
+export type StatsPeriodKind = '7' | '30' | '90' | 'all' | 'today' | 'custom'
 
 export interface StatsPeriod {
 	kind: StatsPeriodKind
@@ -24,6 +25,17 @@ export function resolveStatsPeriod (
 	today: DateOnly = toLocalDateOnly(),
 	earliestDate: DateOnly | null = null,
 ): StatsPeriod {
+	if (kind === 'today') {
+		return {
+			kind,
+			startDate: today,
+			endDate: today,
+			dayCount: 1,
+		}
+	}
+	if (kind === 'custom') {
+		throw new Error('Use resolveReportPeriod for custom ranges')
+	}
 	if (kind === 'all') {
 		const startDate = earliestDate && earliestDate < today ? earliestDate : today
 		return {
@@ -83,5 +95,9 @@ export function statsPeriodLabel (kind: StatsPeriodKind): string {
 			return '90 дней'
 		case 'all':
 			return 'Всё'
+		case 'today':
+			return 'Сегодня'
+		case 'custom':
+			return 'Свой период'
 	}
 }

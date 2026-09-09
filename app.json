@@ -45,7 +45,8 @@
           "photosPermission": "Приложению нужен доступ к фото, чтобы сохранять моменты малыша.",
           "cameraPermission": "Приложению нужна камера, чтобы снимать моменты малыша."
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

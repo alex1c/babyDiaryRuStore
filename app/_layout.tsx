@@ -167,6 +167,26 @@ function RootNavigator () {
 					options={{ title: 'Обучение', presentation: 'card' }}
 				/>
 				<Stack.Screen
+					name="reports/index"
+					options={{ title: 'Отчёты и экспорт', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="reports/share"
+					options={{ title: 'Поделиться сводкой', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="reports/pdf"
+					options={{ title: 'Создать PDF', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="reports/ready"
+					options={{ title: 'Отчёт готов', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="reports/first-year"
+					options={{ title: 'Первый год малыша', presentation: 'card' }}
+				/>
+				<Stack.Screen
 					name="health/index"
 					options={{ title: 'Здоровье', presentation: 'card' }}
 				/>
