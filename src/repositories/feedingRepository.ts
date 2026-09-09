@@ -197,6 +197,23 @@ export class FeedingRepository {
 		return rows.map(mapFeeding)
 	}
 
+	/** Inclusive start_local_date range for Statistics period loads. */
+	async listByChildAndLocalDateRange (
+		childId: string,
+		startDate: string,
+		endDate: string,
+	): Promise<FeedingEvent[]> {
+		const rows = await this.db.getAllAsync<FeedingJoinRow>(
+			`${FEEDING_SELECT} AND e.child_id = ?
+			 AND e.start_local_date >= ? AND e.start_local_date <= ?
+			 ORDER BY e.start_at ASC`,
+			childId,
+			startDate,
+			endDate,
+		)
+		return rows.map(mapFeeding)
+	}
+
 	async findLatest (childId: string): Promise<FeedingEvent | null> {
 		const row = await this.db.getFirstAsync<FeedingJoinRow>(
 			`${FEEDING_SELECT} AND e.child_id = ?

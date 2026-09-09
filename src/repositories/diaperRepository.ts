@@ -112,6 +112,22 @@ export class DiaperRepository {
 		return rows.map(mapDiaper)
 	}
 
+	async listByChildAndLocalDateRange (
+		childId: string,
+		startDate: string,
+		endDate: string,
+	): Promise<DiaperEvent[]> {
+		const rows = await this.db.getAllAsync<DiaperJoinRow>(
+			`${DIAPER_SELECT} AND e.child_id = ?
+			 AND e.start_local_date >= ? AND e.start_local_date <= ?
+			 ORDER BY e.start_at ASC`,
+			childId,
+			startDate,
+			endDate,
+		)
+		return rows.map(mapDiaper)
+	}
+
 	async create (input: CreateDiaperInput): Promise<DiaperEvent> {
 		const occurredAt = input.occurredAt ?? toOffsetDateTime(new Date())
 		const start = buildEventStart(parseOffsetDateTime(occurredAt))

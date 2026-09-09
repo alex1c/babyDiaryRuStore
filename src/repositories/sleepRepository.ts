@@ -127,6 +127,27 @@ export class SleepRepository {
 		return rows.map(mapSleep)
 	}
 
+	/**
+	 * Sleeps overlapping an inclusive local-date period (for Statistics).
+	 * Uses existing (child_id, start_local_date) / end_local indexes.
+	 */
+	async listOverlappingLocalDateRange (
+		childId: string,
+		startDate: string,
+		endDate: string,
+	): Promise<SleepEvent[]> {
+		const rows = await this.db.getAllAsync<SleepJoinRow>(
+			`${SLEEP_SELECT} AND e.child_id = ?
+			 AND e.start_local_date <= ?
+			 AND (e.end_local_date IS NULL OR e.end_local_date >= ?)
+			 ORDER BY e.start_at ASC`,
+			childId,
+			endDate,
+			startDate,
+		)
+		return rows.map(mapSleep)
+	}
+
 	async start (input: StartSleepInput): Promise<SleepEvent> {
 		const now = new Date()
 		const startedAt = input.startedAt ?? toOffsetDateTime(now)

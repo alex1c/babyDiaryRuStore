@@ -1042,6 +1042,24 @@ export class MemorySqlExecutor implements SqlExecutor {
 				.slice(0, 1)
 		}
 
+		if (
+			/AND e\.child_id = \? AND e\.start_local_date >= \? AND e\.start_local_date <= \?/i.test(
+				sql,
+			)
+		) {
+			const [childId, startDate, endDate] = params
+			return rows
+				.filter(
+					(r) =>
+						r.child_id === childId &&
+						String(r.start_local_date) >= String(startDate) &&
+						String(r.start_local_date) <= String(endDate),
+				)
+				.sort((a, b) =>
+					String(a.start_at).localeCompare(String(b.start_at)),
+				)
+		}
+
 		if (/AND e\.child_id = \? AND e\.start_local_date = \?/i.test(sql)) {
 			const [childId, localDate] = params
 			return rows
@@ -1110,14 +1128,14 @@ export class MemorySqlExecutor implements SqlExecutor {
 				sql,
 			)
 		) {
-			const [childId, localDate] = params
+			const [childId, startLte, endGte] = params
 			rows = rows
 				.filter(
 					(r) =>
 						r.child_id === childId &&
-						String(r.start_local_date) <= String(localDate) &&
+						String(r.start_local_date) <= String(startLte) &&
 						(r.end_local_date == null ||
-							String(r.end_local_date) >= String(localDate)),
+							String(r.end_local_date) >= String(endGte)),
 				)
 				.sort((a, b) =>
 					String(a.start_at).localeCompare(String(b.start_at)),
@@ -1148,6 +1166,23 @@ export class MemorySqlExecutor implements SqlExecutor {
 
 		if (/AND e\.id = \?/i.test(sql)) {
 			return rows.filter((r) => r.id === params[0])
+		}
+		if (
+			/AND e\.child_id = \? AND e\.start_local_date >= \? AND e\.start_local_date <= \?/i.test(
+				sql,
+			)
+		) {
+			const [childId, startDate, endDate] = params
+			return rows
+				.filter(
+					(r) =>
+						r.child_id === childId &&
+						String(r.start_local_date) >= String(startDate) &&
+						String(r.start_local_date) <= String(endDate),
+				)
+				.sort((a, b) =>
+					String(a.start_at).localeCompare(String(b.start_at)),
+				)
 		}
 		if (/AND e\.child_id = \? AND e\.start_local_date = \?/i.test(sql)) {
 			const [childId, localDate] = params
@@ -1784,6 +1819,21 @@ export class MemorySqlExecutor implements SqlExecutor {
 		let rows = [...this.tables.growth_measurements]
 		if (/WHERE id = \?/i.test(sql)) {
 			rows = rows.filter((r) => r.id === params[0])
+		} else if (
+			/child_id = \? AND measured_local_date >= \? AND measured_local_date <= \?/i.test(
+				sql,
+			)
+		) {
+			rows = rows.filter(
+				(r) =>
+					r.child_id === params[0] &&
+					String(r.measured_local_date) >= String(params[1]) &&
+					String(r.measured_local_date) <= String(params[2]),
+			)
+			rows.sort((a, b) =>
+				String(a.measured_at).localeCompare(String(b.measured_at)),
+			)
+			return rows
 		} else if (/child_id = \?/i.test(sql)) {
 			rows = rows.filter((r) => r.child_id === params[0])
 		}

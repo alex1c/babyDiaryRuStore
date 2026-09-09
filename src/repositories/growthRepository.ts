@@ -76,6 +76,22 @@ export class GrowthRepository {
 		return rows.map(mapGrowth)
 	}
 
+	async listByChildAndLocalDateRange (
+		childId: string,
+		startDate: string,
+		endDate: string,
+	): Promise<GrowthMeasurement[]> {
+		const rows = await this.db.getAllAsync<GrowthRow>(
+			`${GROWTH_SELECT} WHERE child_id = ?
+			 AND measured_local_date >= ? AND measured_local_date <= ?
+			 ORDER BY measured_at ASC`,
+			childId,
+			startDate,
+			endDate,
+		)
+		return rows.map(mapGrowth)
+	}
+
 	/** Latest non-null value per metric (may come from different visits). */
 	async findLatestMetrics (childId: string): Promise<{
 		weight: GrowthMeasurement | null
