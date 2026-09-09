@@ -8,7 +8,7 @@ import {
 } from '../domain/diaperLabels'
 import type { DiaperEvent } from '../models/diaper'
 import { formatRelativeAgo } from './feedingFormat'
-import { formatLatestDiaperSummary } from './diaryTimeline'
+import { diaperKindLabel } from '../domain/diaperLabels'
 import type { SummaryRow } from '../components/TodaySummary'
 
 export interface TodayDiaperModel {
@@ -27,10 +27,7 @@ export function buildTodayDiaperModel (
 	const aggregate = aggregateDiapersForLocalDay(dayDiapers)
 	const hasData = dayDiapers.length > 0 || latest != null
 	const latestSummary = latest
-		? formatLatestDiaperSummary(
-			latest,
-			formatRelativeAgo(latest.startAt, nowMs),
-		)
+		? `${diaperKindLabel(latest.kind)} · ${formatRelativeAgo(latest.startAt, nowMs)}`
 		: 'Пока нет записей'
 
 	return {

@@ -211,6 +211,21 @@ CREATE INDEX idx_custom_defs_child_active
 	ON custom_event_definitions(child_id, is_active);
 `,
 	},
+	{
+		version: 5,
+		name: 'diary_query_indexes',
+		sql: `
+PRAGMA foreign_keys = ON;
+
+-- Day-mode and timeline sorts by wall-clock start.
+CREATE INDEX IF NOT EXISTS idx_events_child_start_at
+	ON events(child_id, start_at);
+
+-- Overnight sleep overlap lookups (end_local_date range).
+CREATE INDEX IF NOT EXISTS idx_events_child_end_local
+	ON events(child_id, end_local_date);
+`,
+	},
 ]
 
 export const LATEST_SCHEMA_VERSION =

@@ -1,39 +1,58 @@
 /**
- * Diary timeline — sleep, feeding, diaper, and other everyday events.
+ * Diary — day-first timeline with date nav, filters, search, and quick add.
  */
 
-import { useCallback, useState } from 'react'
+import DateTimePicker, {
+	type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker'
+import { useCallback, useMemo, useState } from 'react'
 import {
 	ActivityIndicator,
+	Alert,
 	FlatList,
+	Platform,
 	Pressable,
 	StyleSheet,
 	Text,
+	TextInput,
 	View,
 } from 'react-native'
 import { useFocusEffect, useRouter, type Href } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { BannerAdSlot } from '@/src/components/BannerAdSlot'
+import { DiaryTimelineRowView } from '@/src/components/DiaryTimelineRow'
+import {
+	MoreActionsSheet,
+	type MoreActionId,
+} from '@/src/components/MoreActionsSheet'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import {
-	activityToTimeline,
-	customToTimeline,
-	diaperToTimeline,
-	feedingToTimeline,
-	medicineToTimeline,
-	noteToTimeline,
-	sleepToTimeline,
-	temperatureToTimeline,
+	clampLocalDateToToday,
+	formatDiaryDayLabel,
+	shiftLocalDate,
+} from '@/src/presentation/diaryDayLabels'
+import {
+	loadDiaryDay,
+	loadDiaryHistoryPage,
+} from '@/src/presentation/diaryLoad'
+import type { DiaryDaySummary } from '@/src/presentation/diaryDaySummary'
+import {
+	matchesDiaryFilters,
+	matchesDiarySearch,
 	type DiaryFilter,
+	type DiaryOtherFilter,
 	type TimelineRow,
 } from '@/src/presentation/diaryTimeline'
 import { logger } from '@/src/services/logger'
 import { useAppTheme } from '@/src/theme/ThemeProvider'
+import { toLocalDateOnly } from '@/src/utils/datetime'
 import { radii, spacing, typography } from '@/src/theme/tokens'
 
-const FILTERS: { id: DiaryFilter; label: string }[] = [
+type ViewMode = 'day' | 'all'
+
+const PRIMARY_FILTERS: { id: DiaryFilter; label: string }[] = [
 	{ id: 'all', label: 'Все' },
 	{ id: 'sleep', label: 'Сон' },
 	{ id: 'feeding', label: 'Кормление' },
@@ -41,63 +60,86 @@ const FILTERS: { id: DiaryFilter; label: string }[] = [
 	{ id: 'other', label: 'Другое' },
 ]
 
+const OTHER_FILTERS: { id: DiaryOtherFilter; label: string }[] = [
+	{ id: 'all', label: 'Все' },
+	{ id: 'activity', label: 'Активности' },
+	{ id: 'temperature', label: 'Температура' },
+	{ id: 'medicine', label: 'Лекарства' },
+	{ id: 'custom', label: 'Свои' },
+]
+
 export default function DiaryScreen () {
 	const { colors } = useAppTheme()
 	const router = useRouter()
 	const { activeChild, loading: childLoading } = useActiveChild()
 	const { sleep, feeding, diaper, quickEvents } = useDatabase()
-	const [rows, setRows] = useState<TimelineRow[]>([])
+
+	const today = toLocalDateOnly()
+	const [selectedDate, setSelectedDate] = useState(today)
+	const [viewMode, setViewMode] = useState<ViewMode>('day')
 	const [filter, setFilter] = useState<DiaryFilter>('all')
+	const [otherFilter, setOtherFilter] = useState<DiaryOtherFilter>('all')
+	const [searchOpen, setSearchOpen] = useState(false)
+	const [searchQuery, setSearchQuery] = useState('')
+	const [pickerOpen, setPickerOpen] = useState(false)
+	const [moreOpen, setMoreOpen] = useState(false)
+	const [customDefs, setCustomDefs] = useState<{ id: string; name: string }[]>(
+		[],
+	)
+	const [rows, setRows] = useState<TimelineRow[]>([])
+	const [summary, setSummary] = useState<DiaryDaySummary | null>(null)
 	const [loading, setLoading] = useState(true)
-	const [nowMs] = useState(() => Date.now())
+
+	const reposReady = Boolean(sleep && feeding && diaper && quickEvents)
 
 	const refresh = useCallback(async () => {
-		if (!sleep || !feeding || !diaper || !quickEvents || !activeChild) {
+		if (!reposReady || !activeChild || !sleep || !feeding || !diaper || !quickEvents) {
 			setRows([])
+			setSummary(null)
 			setLoading(false)
 			return
 		}
+		const repos = { sleep, feeding, diaper, quickEvents }
+		const stamp = Date.now()
 		try {
-			// Sequential SQLite — never Promise.all on one NativeDatabase.
-			const sleeps = await sleep.listByChild(activeChild.id, 100)
-			const feedings = await feeding.listByChild(activeChild.id, 100)
-			const diapers = await diaper.listByChild(activeChild.id, 100)
-			const activities = await quickEvents.listActivitiesByChild(
+			if (viewMode === 'day') {
+				const bundle = await loadDiaryDay(
+					repos,
+					activeChild.id,
+					selectedDate,
+					stamp,
+				)
+				setRows(bundle.rows)
+				setSummary(bundle.summary)
+			} else {
+				const history = await loadDiaryHistoryPage(
+					repos,
+					activeChild.id,
+					120,
+					stamp,
+				)
+				setRows(history)
+				setSummary(null)
+			}
+			const defs = await quickEvents.listActiveCustomDefinitions(
 				activeChild.id,
-				100,
 			)
-			const temps = await quickEvents.listTemperaturesByChild(
-				activeChild.id,
-				50,
-			)
-			const medicines = await quickEvents.listMedicinesByChild(
-				activeChild.id,
-				50,
-			)
-			const notes = await quickEvents.listNotesByChild(activeChild.id, 50)
-			const customs = await quickEvents.listCustomEventsByChild(
-				activeChild.id,
-				50,
-			)
-
-			const merged: TimelineRow[] = [
-				...sleeps.map((e) => sleepToTimeline(e, nowMs)),
-				...feedings.map((e) => feedingToTimeline(e, nowMs)),
-				...diapers.map((e) => diaperToTimeline(e)),
-				...activities.map((e) => activityToTimeline(e)),
-				...temps.map((e) => temperatureToTimeline(e)),
-				...medicines.map((e) => medicineToTimeline(e)),
-				...notes.map((e) => noteToTimeline(e)),
-				...customs.map((e) => customToTimeline(e)),
-			]
-			merged.sort((a, b) => b.startAt.localeCompare(a.startAt))
-			setRows(merged)
+			setCustomDefs(defs.map((d) => ({ id: d.id, name: d.name })))
 		} catch (error) {
 			logger.error('Failed to load diary', error)
 		} finally {
 			setLoading(false)
 		}
-	}, [sleep, feeding, diaper, quickEvents, activeChild, nowMs])
+	}, [
+		reposReady,
+		activeChild,
+		sleep,
+		feeding,
+		diaper,
+		quickEvents,
+		viewMode,
+		selectedDate,
+	])
 
 	useFocusEffect(
 		useCallback(() => {
@@ -106,14 +148,84 @@ export default function DiaryScreen () {
 		}, [refresh]),
 	)
 
-	const visible = rows.filter((row) => {
-		if (filter === 'all') {
-			return true
-		}
-		return row.filterGroup === filter
-	})
+	const visible = useMemo(() => {
+		return rows.filter(
+			(row) =>
+				matchesDiaryFilters(row, filter, otherFilter) &&
+				matchesDiarySearch(row, searchQuery),
+		)
+	}, [rows, filter, otherFilter, searchQuery])
 
-	if (childLoading || loading) {
+	const goPrevDay = (): void => {
+		setViewMode('day')
+		setSelectedDate((d) => shiftLocalDate(d, -1))
+	}
+
+	const goNextDay = (): void => {
+		setViewMode('day')
+		setSelectedDate((d) => clampLocalDateToToday(shiftLocalDate(d, 1), today))
+	}
+
+	const onPickerChange = (
+		event: DateTimePickerEvent,
+		date?: Date,
+	): void => {
+		if (Platform.OS === 'android') {
+			setPickerOpen(false)
+		}
+		if (event.type === 'dismissed' || !date) {
+			return
+		}
+		setViewMode('day')
+		setSelectedDate(clampLocalDateToToday(toLocalDateOnly(date), today))
+		if (Platform.OS === 'ios') {
+			setPickerOpen(false)
+		}
+	}
+
+	const handleMoreSelect = (id: MoreActionId): void => {
+		if (id === 'custom') {
+			router.push('/event/custom-type' as Href)
+			return
+		}
+		router.push(`/event/new?kind=${id}` as Href)
+	}
+
+	const openAddMenu = (): void => {
+		Alert.alert('Добавить', undefined, [
+			{
+				text: 'Сон',
+				onPress: () => router.push('/sleep/manual' as Href),
+			},
+			{
+				text: 'Кормление',
+				onPress: () => router.push('/feeding' as Href),
+			},
+			{
+				text: 'Подгузник',
+				onPress: () => router.push('/diaper' as Href),
+			},
+			{
+				text: 'Ещё…',
+				onPress: () => setMoreOpen(true),
+			},
+			{ text: 'Отмена', style: 'cancel' },
+		])
+	}
+
+	const onSummaryPress = (id: string): void => {
+		if (id === 'diary-sleep') {
+			setFilter('sleep')
+		} else if (id === 'diary-feeding') {
+			setFilter('feeding')
+		} else if (id === 'diary-diaper') {
+			setFilter('diaper')
+		}
+	}
+
+	const canGoForward = selectedDate < today
+
+	if (childLoading || (loading && rows.length === 0)) {
 		return (
 			<View style={[styles.center, { backgroundColor: colors.background }]}>
 				<ActivityIndicator color={colors.primary} />
@@ -128,20 +240,161 @@ export default function DiaryScreen () {
 		>
 			<FlatList
 				data={visible}
-				keyExtractor={(item) => `${item.kind}-${item.id}`}
+				keyExtractor={(item) => `${item.kind}-${item.id}-${item.groupLocalDate}`}
 				contentContainerStyle={styles.content}
 				ListHeaderComponent={
 					<View style={styles.header}>
-						<Text style={[styles.lead, { color: colors.textSecondary }]}>
-							Все события дня. Нажмите запись, чтобы исправить.
-						</Text>
+						<View style={styles.topBar}>
+							<Pressable
+								onPress={() => setSearchOpen((v) => !v)}
+								style={styles.iconBtn}
+								accessibilityRole="button"
+								accessibilityLabel="Поиск"
+							>
+								<Text style={{ color: colors.primary, fontWeight: '700' }}>
+									Поиск
+								</Text>
+							</Pressable>
+							<Pressable
+								onPress={() =>
+									setViewMode((m) => (m === 'day' ? 'all' : 'day'))
+								}
+								style={styles.iconBtn}
+								accessibilityRole="button"
+								accessibilityLabel={
+									viewMode === 'day' ? 'Все события' : 'Режим дня'
+								}
+							>
+								<Text style={{ color: colors.textSecondary, fontWeight: '600' }}>
+									{viewMode === 'day' ? 'Все' : 'День'}
+								</Text>
+							</Pressable>
+							<Pressable
+								onPress={openAddMenu}
+								style={[styles.addFab, { backgroundColor: colors.primary }]}
+								accessibilityRole="button"
+								accessibilityLabel="Добавить событие"
+							>
+								<Text style={styles.addFabText}>+</Text>
+							</Pressable>
+						</View>
+
+						{searchOpen ? (
+							<TextInput
+								value={searchQuery}
+								onChangeText={setSearchQuery}
+								placeholder={
+									viewMode === 'day'
+										? 'Поиск в выбранном дне'
+										: 'Поиск по истории'
+								}
+								placeholderTextColor={colors.textMuted}
+								autoFocus
+								style={[
+									styles.search,
+									{
+										color: colors.text,
+										borderColor: colors.border,
+										backgroundColor: colors.surface,
+									},
+								]}
+							/>
+						) : null}
+
+						{viewMode === 'day' ? (
+							<View style={styles.dateNav}>
+								<Pressable
+									onPress={goPrevDay}
+									style={styles.navArrow}
+									accessibilityRole="button"
+									accessibilityLabel="Предыдущий день"
+								>
+									<Text style={[styles.navArrowText, { color: colors.primary }]}>
+										‹
+									</Text>
+								</Pressable>
+								<Pressable
+									onPress={() => setPickerOpen(true)}
+									style={styles.dateBtn}
+									accessibilityRole="button"
+									accessibilityLabel="Выбрать дату"
+								>
+									<Text
+										style={[styles.dateLabel, { color: colors.text }]}
+										numberOfLines={1}
+									>
+										{formatDiaryDayLabel(selectedDate, today)}
+									</Text>
+								</Pressable>
+								<Pressable
+									onPress={goNextDay}
+									disabled={!canGoForward}
+									style={styles.navArrow}
+									accessibilityRole="button"
+									accessibilityLabel="Следующий день"
+									accessibilityState={{ disabled: !canGoForward }}
+								>
+									<Text
+										style={[
+											styles.navArrowText,
+											{
+												color: canGoForward
+													? colors.primary
+													: colors.textMuted,
+											},
+										]}
+									>
+										›
+									</Text>
+								</Pressable>
+							</View>
+						) : (
+							<Text style={[styles.allModeLead, { color: colors.textSecondary }]}>
+								Недавние события (до 120)
+							</Text>
+						)}
+
+						{viewMode === 'day' && summary ? (
+							<View
+								style={[
+									styles.summary,
+									{
+										backgroundColor: colors.surface,
+										borderColor: colors.border,
+									},
+								]}
+							>
+								{summary.rows.map((row) => (
+									<Pressable
+										key={row.id}
+										onPress={() => onSummaryPress(row.id)}
+										style={styles.summaryItem}
+										accessibilityRole="button"
+										accessibilityLabel={`${row.label} ${row.value}`}
+									>
+										<Text style={{ color: colors.textMuted, fontSize: 12 }}>
+											{row.label}
+										</Text>
+										<Text style={{ color: colors.text, fontWeight: '700' }}>
+											{row.value}
+										</Text>
+									</Pressable>
+								))}
+							</View>
+						) : null}
+
 						<View style={styles.filters}>
-							{FILTERS.map((item) => {
+							{PRIMARY_FILTERS.map((item) => {
 								const on = filter === item.id
 								return (
 									<Pressable
 										key={item.id}
-										onPress={() => setFilter(item.id)}
+										onPress={() => {
+											setFilter(item.id)
+											if (item.id !== 'other') {
+												setOtherFilter('all')
+											}
+										}}
 										style={[
 											styles.filterChip,
 											{
@@ -151,9 +404,6 @@ export default function DiaryScreen () {
 												borderColor: colors.border,
 											},
 										]}
-										accessibilityRole="button"
-										accessibilityState={{ selected: on }}
-										accessibilityLabel={item.label}
 									>
 										<Text
 											style={{
@@ -168,81 +418,100 @@ export default function DiaryScreen () {
 								)
 							})}
 						</View>
-						<View style={styles.addRow}>
-							<Pressable
-								onPress={() => router.push('/sleep/manual' as Href)}
-								style={[
-									styles.addBtn,
-									{
-										backgroundColor: colors.primarySoft,
-										borderColor: colors.border,
-									},
-								]}
-							>
-								<Text style={{ color: colors.primary, fontWeight: '700' }}>
-									Сон
-								</Text>
-							</Pressable>
-							<Pressable
-								onPress={() => router.push('/feeding' as Href)}
-								style={[
-									styles.addBtn,
-									{
-										backgroundColor: colors.primarySoft,
-										borderColor: colors.border,
-									},
-								]}
-							>
-								<Text style={{ color: colors.primary, fontWeight: '700' }}>
-									Кормление
-								</Text>
-							</Pressable>
-							<Pressable
-								onPress={() => router.push('/diaper' as Href)}
-								style={[
-									styles.addBtn,
-									{
-										backgroundColor: colors.primarySoft,
-										borderColor: colors.border,
-									},
-								]}
-							>
-								<Text style={{ color: colors.primary, fontWeight: '700' }}>
-									Подгузник
-								</Text>
-							</Pressable>
-						</View>
+
+						{filter === 'other' ? (
+							<View style={styles.filters}>
+								{OTHER_FILTERS.map((item) => {
+									const on = otherFilter === item.id
+									return (
+										<Pressable
+											key={item.id}
+											onPress={() => setOtherFilter(item.id)}
+											style={[
+												styles.filterChip,
+												{
+													backgroundColor: on
+														? colors.primary
+														: colors.surface,
+													borderColor: colors.border,
+												},
+											]}
+										>
+											<Text
+												style={{
+													color: on ? '#FFFFFF' : colors.textSecondary,
+													fontWeight: '600',
+													fontSize: 12,
+												}}
+											>
+												{item.label}
+											</Text>
+										</Pressable>
+									)
+								})}
+							</View>
+						) : null}
 					</View>
 				}
 				ListEmptyComponent={
-					<Text style={[styles.empty, { color: colors.textMuted }]}>
-						Здесь появятся записи дневника
-					</Text>
+					<View style={styles.emptyBox}>
+						<Text style={[styles.empty, { color: colors.textMuted }]}>
+							{searchQuery.trim()
+								? 'Ничего не найдено'
+								: viewMode === 'day'
+									? 'В этот день пока нет записей'
+									: 'Пока нет записей'}
+						</Text>
+						{!searchQuery.trim() ? (
+							<Pressable
+								onPress={openAddMenu}
+								style={[
+									styles.emptyBtn,
+									{ backgroundColor: colors.primarySoft, borderColor: colors.border },
+								]}
+							>
+								<Text style={{ color: colors.primary, fontWeight: '700' }}>
+									Добавить событие
+								</Text>
+							</Pressable>
+						) : null}
+					</View>
 				}
 				renderItem={({ item }) => (
-					<Pressable
+					<DiaryTimelineRowView
+						item={item}
 						onPress={() => router.push(item.href as Href)}
-						style={[
-							styles.row,
-							{
-								backgroundColor: colors.surface,
-								borderColor: colors.border,
-							},
-						]}
-						accessibilityRole="button"
-						accessibilityLabel={item.label}
-					>
-						<Text style={[styles.rowText, { color: colors.text }]}>
-							{item.label}
-						</Text>
-						{item.isActive ? (
-							<Text style={{ color: colors.primary, marginTop: 4 }}>
-								Активный
-							</Text>
-						) : null}
-					</Pressable>
+					/>
 				)}
 				ListFooterComponent={<BannerAdSlot />}
+			/>
+
+			{pickerOpen ? (
+				<DateTimePicker
+					value={new Date(
+						Number(selectedDate.slice(0, 4)),
+						Number(selectedDate.slice(5, 7)) - 1,
+						Number(selectedDate.slice(8, 10)),
+						12,
+						0,
+						0,
+					)}
+					mode="date"
+					maximumDate={new Date()}
+					onChange={onPickerChange}
+				/>
+			) : null}
+
+			<MoreActionsSheet
+				visible={moreOpen}
+				onClose={() => setMoreOpen(false)}
+				onSelect={handleMoreSelect}
+				customNames={customDefs}
+				onSelectCustom={(definitionId) =>
+					router.push(
+						`/event/new?kind=custom&definitionId=${definitionId}` as Href,
+					)
+				}
 			/>
 		</SafeAreaView>
 	)
@@ -256,8 +525,83 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
-	header: { marginBottom: spacing.md },
-	lead: { ...typography.body, marginBottom: spacing.sm },
+	header: { marginBottom: spacing.sm },
+	topBar: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: spacing.sm,
+		marginBottom: spacing.sm,
+	},
+	iconBtn: {
+		minHeight: 40,
+		paddingHorizontal: spacing.sm,
+		justifyContent: 'center',
+	},
+	addFab: {
+		marginLeft: 'auto',
+		width: 44,
+		height: 44,
+		borderRadius: 22,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	addFabText: {
+		color: '#FFFFFF',
+		fontSize: 28,
+		fontWeight: '600',
+		lineHeight: 30,
+	},
+	search: {
+		minHeight: 44,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderRadius: radii.md,
+		paddingHorizontal: spacing.md,
+		marginBottom: spacing.sm,
+	},
+	dateNav: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		marginBottom: spacing.sm,
+	},
+	navArrow: {
+		width: 44,
+		height: 44,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	navArrowText: {
+		fontSize: 28,
+		fontWeight: '600',
+	},
+	dateBtn: {
+		flex: 1,
+		minHeight: 44,
+		alignItems: 'center',
+		justifyContent: 'center',
+		paddingHorizontal: spacing.xs,
+	},
+	dateLabel: {
+		...typography.subtitle,
+		textAlign: 'center',
+	},
+	allModeLead: {
+		...typography.caption,
+		marginBottom: spacing.sm,
+	},
+	summary: {
+		flexDirection: 'row',
+		borderWidth: StyleSheet.hairlineWidth,
+		borderRadius: radii.md,
+		paddingVertical: spacing.sm,
+		marginBottom: spacing.sm,
+	},
+	summaryItem: {
+		flex: 1,
+		alignItems: 'center',
+		gap: 2,
+		minHeight: 44,
+		justifyContent: 'center',
+	},
 	filters: {
 		flexDirection: 'row',
 		flexWrap: 'wrap',
@@ -272,33 +616,21 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
-	addRow: {
-		flexDirection: 'row',
-		gap: spacing.sm,
-	},
-	addBtn: {
-		flex: 1,
-		minHeight: 44,
-		borderRadius: radii.md,
-		borderWidth: StyleSheet.hairlineWidth,
+	emptyBox: {
 		alignItems: 'center',
-		justifyContent: 'center',
+		marginTop: spacing.lg,
+		gap: spacing.md,
 	},
 	empty: {
 		...typography.body,
 		textAlign: 'center',
-		marginTop: spacing.lg,
 	},
-	row: {
-		borderWidth: StyleSheet.hairlineWidth,
+	emptyBtn: {
+		minHeight: 48,
+		paddingHorizontal: spacing.lg,
 		borderRadius: radii.md,
-		padding: spacing.md,
-		marginBottom: spacing.sm,
-		minHeight: 56,
+		borderWidth: StyleSheet.hairlineWidth,
+		alignItems: 'center',
 		justifyContent: 'center',
-	},
-	rowText: {
-		...typography.body,
-		flexShrink: 1,
 	},
 })

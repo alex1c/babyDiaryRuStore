@@ -577,6 +577,20 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return this.queryCustomDefinitions(normalized, params) as T[]
 		}
 
+		if (/FROM events WHERE type = 'note' AND child_id = \? AND start_local_date = \?/i.test(normalized)) {
+			const [childId, localDate] = params
+			return [...this.tables.events]
+				.filter(
+					(r) =>
+						r.type === 'note' &&
+						r.child_id === childId &&
+						r.start_local_date === localDate,
+				)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				) as T[]
+		}
+
 		if (/FROM events WHERE type = 'note' AND child_id = \?/i.test(normalized)) {
 			const [childId, limit] = params
 			return [...this.tables.events]
@@ -925,6 +939,18 @@ export class MemorySqlExecutor implements SqlExecutor {
 		if (/AND e\.id = \?/i.test(sql)) {
 			return rows.filter((r) => r.id === params[0])
 		}
+		if (/AND e\.child_id = \? AND e\.start_local_date = \?/i.test(sql)) {
+			const [childId, localDate] = params
+			return rows
+				.filter(
+					(r) =>
+						r.child_id === childId &&
+						r.start_local_date === localDate,
+				)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+		}
 		if (/AND e\.child_id = \?/i.test(sql)) {
 			const childId = params[0]
 			const limit =
@@ -970,6 +996,18 @@ export class MemorySqlExecutor implements SqlExecutor {
 		if (/AND e\.id = \?/i.test(sql)) {
 			return rows.filter((r) => r.id === params[0])
 		}
+		if (/AND e\.child_id = \? AND e\.start_local_date = \?/i.test(sql)) {
+			const [childId, localDate] = params
+			return rows
+				.filter(
+					(r) =>
+						r.child_id === childId &&
+						r.start_local_date === localDate,
+				)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+		}
 		if (/AND e\.child_id = \?/i.test(sql)) {
 			const childId = params[0]
 			const limit =
@@ -1013,6 +1051,18 @@ export class MemorySqlExecutor implements SqlExecutor {
 
 		if (/AND e\.id = \?/i.test(sql)) {
 			return rows.filter((r) => r.id === params[0])
+		}
+		if (/AND e\.child_id = \? AND e\.start_local_date = \?/i.test(sql)) {
+			const [childId, localDate] = params
+			return rows
+				.filter(
+					(r) =>
+						r.child_id === childId &&
+						r.start_local_date === localDate,
+				)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
 		}
 		if (/AND e\.child_id = \?/i.test(sql)) {
 			const childId = params[0]
@@ -1090,6 +1140,18 @@ export class MemorySqlExecutor implements SqlExecutor {
 
 		if (/AND e\.id = \?/i.test(sql)) {
 			return rows.filter((r) => r.id === params[0])
+		}
+		if (/AND e\.child_id = \? AND e\.start_local_date = \?/i.test(sql)) {
+			const [childId, localDate] = params
+			return rows
+				.filter(
+					(r) =>
+						r.child_id === childId &&
+						r.start_local_date === localDate,
+				)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
 		}
 		if (/AND e\.child_id = \?/i.test(sql)) {
 			const childId = params[0]

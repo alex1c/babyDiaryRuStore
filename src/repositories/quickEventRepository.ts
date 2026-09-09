@@ -392,6 +392,19 @@ export class QuickEventRepository {
 		return rows.map(mapActivity)
 	}
 
+	async listActivitiesByChildAndLocalDate (
+		childId: string,
+		localDate: string,
+	): Promise<ActivityEvent[]> {
+		const rows = await this.db.getAllAsync<ActivityJoinRow>(
+			`${ACTIVITY_SELECT} AND e.child_id = ? AND e.start_local_date = ?
+			 ORDER BY e.start_at DESC`,
+			childId,
+			localDate,
+		)
+		return rows.map(mapActivity)
+	}
+
 	async updateActivity (
 		eventId: string,
 		input: {
@@ -513,6 +526,19 @@ export class QuickEventRepository {
 		return rows.map(mapTemp)
 	}
 
+	async listTemperaturesByChildAndLocalDate (
+		childId: string,
+		localDate: string,
+	): Promise<TemperatureEvent[]> {
+		const rows = await this.db.getAllAsync<TempJoinRow>(
+			`${TEMP_SELECT} AND e.child_id = ? AND e.start_local_date = ?
+			 ORDER BY e.start_at DESC`,
+			childId,
+			localDate,
+		)
+		return rows.map(mapTemp)
+	}
+
 	async updateTemperature (
 		eventId: string,
 		input: {
@@ -629,6 +655,19 @@ export class QuickEventRepository {
 			 ORDER BY e.start_at DESC LIMIT ?`,
 			childId,
 			limit,
+		)
+		return rows.map(mapMedicine)
+	}
+
+	async listMedicinesByChildAndLocalDate (
+		childId: string,
+		localDate: string,
+	): Promise<MedicineEvent[]> {
+		const rows = await this.db.getAllAsync<MedicineJoinRow>(
+			`${MEDICINE_SELECT} AND e.child_id = ? AND e.start_local_date = ?
+			 ORDER BY e.start_at DESC`,
+			childId,
+			localDate,
 		)
 		return rows.map(mapMedicine)
 	}
@@ -785,6 +824,21 @@ export class QuickEventRepository {
 			 ORDER BY start_at DESC LIMIT ?`,
 			childId,
 			limit,
+		)
+		return rows.map(mapNote)
+	}
+
+	async listNotesByChildAndLocalDate (
+		childId: string,
+		localDate: string,
+	): Promise<NoteEvent[]> {
+		const rows = await this.db.getAllAsync<NoteRow>(
+			`SELECT id, child_id, start_at, end_at, start_local_date, end_local_date,
+			        title, notes, created_at, updated_at
+			 FROM events WHERE type = 'note' AND child_id = ? AND start_local_date = ?
+			 ORDER BY start_at DESC`,
+			childId,
+			localDate,
 		)
 		return rows.map(mapNote)
 	}
@@ -1009,6 +1063,19 @@ export class QuickEventRepository {
 			 ORDER BY e.start_at DESC LIMIT ?`,
 			childId,
 			limit,
+		)
+		return rows.map(mapCustom)
+	}
+
+	async listCustomEventsByChildAndLocalDate (
+		childId: string,
+		localDate: string,
+	): Promise<CustomEvent[]> {
+		const rows = await this.db.getAllAsync<CustomJoinRow>(
+			`${CUSTOM_SELECT} AND e.child_id = ? AND e.start_local_date = ?
+			 ORDER BY e.start_at DESC`,
+			childId,
+			localDate,
 		)
 		return rows.map(mapCustom)
 	}

@@ -1,11 +1,10 @@
 /**
- * Unified Russian timeline presentation for Diary / Today recent rows.
+ * Unified Russian timeline presentation for Diary.
+ * Two-line rows: time + title / subtitle; searchText is separate from display.
  */
 
 import { sleepTypeLabel } from '../domain/sleepType'
-import {
-	diaperKindLabel,
-} from '../domain/diaperLabels'
+import { diaperKindLabel } from '../domain/diaperLabels'
 import {
 	activityTypeLabel,
 	formatTemperatureCelsius,
@@ -13,6 +12,7 @@ import {
 import { breastfeedingLiveTotals } from '../domain/breastfeedingDuration'
 import {
 	bottleContentLabel,
+	breastSideLabel,
 	feedingTypeLabel,
 } from '../domain/feedingLabels'
 import type { DiaperEvent } from '../models/diaper'
@@ -26,8 +26,16 @@ import type {
 	TemperatureEvent,
 } from '../models/quickEvents'
 import { formatDurationMs } from '../utils/durationFormat'
-import { formatLocalTime, parseOffsetDateTime } from '../utils/datetime'
-import { formatMl, formatFeedingDetail } from './feedingFormat'
+import {
+	formatLocalTime,
+	localDateFromOffsetDateTime,
+	parseOffsetDateTime,
+} from '../utils/datetime'
+import { formatMl } from './feedingFormat'
+import {
+	diaryVisualForKind,
+	type DiaryAccentToken,
+} from './diaryVisual'
 
 export type TimelineKind =
 	| 'sleep'
@@ -41,14 +49,55 @@ export type TimelineKind =
 
 export type DiaryFilter = 'all' | 'sleep' | 'feeding' | 'diaper' | 'other'
 
+export type DiaryOtherFilter =
+	| 'all'
+	| 'activity'
+	| 'temperature'
+	| 'medicine'
+	| 'custom'
+
 export interface TimelineRow {
 	id: string
 	kind: TimelineKind
 	startAt: string
+	/** Primary local date for day grouping (start, or selected day for overnight). */
+	groupLocalDate: string
+	timeLabel: string
+	title: string
+	subtitle: string
+	/** Flat label for simple lists / accessibility. */
 	label: string
+	searchText: string
 	isActive: boolean
 	href: string
 	filterGroup: Exclude<DiaryFilter, 'all'>
+	otherGroup: DiaryOtherFilter
+	iconKey: string
+	accent: DiaryAccentToken
+}
+
+function withVisual (
+	kind: TimelineKind,
+	row: Omit<TimelineRow, 'kind' | 'iconKey' | 'accent' | 'label'>,
+): TimelineRow {
+	const visual = diaryVisualForKind(kind)
+	const label = `${row.timeLabel}  ${row.title}${
+		row.subtitle ? ` · ${row.subtitle}` : ''
+	}`
+	return {
+		...row,
+		kind,
+		label,
+		iconKey: visual.iconKey,
+		accent: visual.accent,
+	}
+}
+
+function joinSearch (...parts: (string | null | undefined)[]): string {
+	return parts
+		.filter((p): p is string => Boolean(p && p.trim()))
+		.join(' ')
+		.toLocaleLowerCase('ru')
 }
 
 export function formatDiaperDetail (event: DiaperEvent): string {
@@ -89,136 +138,286 @@ export function formatCustomDetail (event: CustomEvent): string {
 	return name
 }
 
-export function sleepToTimeline (
+/**
+ * Sleep row for a selected diary day — overnight sleeps stay visible on the
+ * morning day without duplicating the SQLite row.
+ */
+export function sleepToTimelineForDay (
 	event: SleepEvent,
+	selectedLocalDate: string,
 	nowMs: number,
 ): TimelineRow {
-	const start = formatLocalTime(event.startAt)
-	const end =
+	const startLocal = event.startLocalDate
+	const endLocal =
+		event.endLocalDate ??
+		(event.endAt ? localDateFromOffsetDateTime(event.endAt) : selectedLocalDate)
+	const startClock = formatLocalTime(event.startAt)
+	const endClock =
 		event.endAt == null ? 'сейчас' : formatLocalTime(event.endAt)
+
+	let timeLabel = `${startClock}–${endClock}`
+	if (startLocal < selectedLocalDate) {
+		timeLabel = `с ${startClock}–${endClock}`
+	} else if (event.endAt && endLocal > selectedLocalDate) {
+		timeLabel = `${startClock}→`
+	}
+
 	const endMs =
 		event.endAt == null
 			? nowMs
 			: parseOffsetDateTime(event.endAt).getTime()
-	const durMs = endMs - parseOffsetDateTime(event.startAt).getTime()
-	const dur = formatDurationMs(Math.max(0, durMs))
-	return {
+	const durMs = Math.max(
+		0,
+		endMs - parseOffsetDateTime(event.startAt).getTime(),
+	)
+	const active = event.endAt == null
+	const subtitle = active
+		? `идёт · ${sleepTypeLabel(event.sleepType)}`
+		: `${formatDurationMs(durMs)} · ${sleepTypeLabel(event.sleepType)}`
+
+	return withVisual('sleep', {
 		id: event.id,
-		kind: 'sleep',
 		startAt: event.startAt,
-		label: `${start}–${end}  Сон · ${dur} · ${sleepTypeLabel(event.sleepType)}`,
-		isActive: event.endAt == null,
+		groupLocalDate: selectedLocalDate,
+		timeLabel,
+		title: 'Сон',
+		subtitle,
+		searchText: joinSearch(
+			'сон',
+			sleepTypeLabel(event.sleepType),
+			event.notes,
+		),
+		isActive: active,
 		href: `/sleep/${event.id}`,
 		filterGroup: 'sleep',
-	}
+		otherGroup: 'all',
+	})
+}
+
+export function sleepToTimeline (
+	event: SleepEvent,
+	nowMs: number,
+): TimelineRow {
+	return sleepToTimelineForDay(event, event.startLocalDate, nowMs)
 }
 
 export function feedingToTimeline (
 	event: FeedingEvent,
 	nowMs: number,
 ): TimelineRow {
-	return {
+	const active = event.type === 'breastfeeding' && event.endAt == null
+	let title = feedingTypeLabel(event.type, event.feedingKind)
+	let subtitle = ''
+	let searchExtra = ''
+
+	switch (event.type) {
+		case 'breastfeeding': {
+			const totals = breastfeedingLiveTotals(event, nowMs)
+			const sides: string[] = []
+			if (totals.leftSeconds > 0) {
+				sides.push('левая')
+			}
+			if (totals.rightSeconds > 0) {
+				sides.push('правая')
+			}
+			if (sides.length === 0) {
+				sides.push(breastSideLabel(event.lastSide).toLowerCase())
+			}
+			title = 'Грудь'
+			subtitle = active
+				? `идёт · ${sides.join(' + ')}`
+				: `${sides.join(' + ')} · ${formatDurationMs(totals.totalSeconds * 1000)}`
+			searchExtra = joinSearch(event.notes)
+			break
+		}
+		case 'bottle':
+			title = bottleContentLabel(
+				event.feedingKind === 'formula' ? 'formula' : 'expressed_milk',
+			)
+			subtitle = formatMl(event.amountMl)
+			searchExtra = joinSearch(event.notes)
+			break
+		case 'water':
+			title = 'Вода'
+			subtitle = formatMl(event.amountMl)
+			searchExtra = joinSearch(event.notes)
+			break
+		case 'pumping':
+			title = 'Сцеживание'
+			subtitle = [
+				event.amountMl != null ? formatMl(event.amountMl) : null,
+				event.durationSeconds != null
+					? formatDurationMs(event.durationSeconds * 1000)
+					: null,
+			]
+				.filter(Boolean)
+				.join(' · ')
+			searchExtra = joinSearch(event.notes)
+			break
+		case 'solid_food':
+			title = 'Прикорм'
+			subtitle = event.foodName
+			searchExtra = joinSearch(event.foodName, event.amountText, event.notes)
+			break
+	}
+
+	return withVisual('feeding', {
 		id: event.id,
-		kind: 'feeding',
 		startAt: event.startAt,
-		label: `${formatLocalTime(event.startAt)} ${formatFeedingDetail(event, nowMs)}`,
-		isActive:
-			event.type === 'breastfeeding' && event.endAt == null,
+		groupLocalDate: event.startLocalDate,
+		timeLabel: formatLocalTime(event.startAt),
+		title,
+		subtitle,
+		searchText: joinSearch(title, subtitle, searchExtra),
+		isActive: active,
 		href: `/feeding/${event.id}`,
 		filterGroup: 'feeding',
-	}
+		otherGroup: 'all',
+	})
 }
 
 export function diaperToTimeline (event: DiaperEvent): TimelineRow {
-	return {
+	const kind = diaperKindLabel(event.kind)
+	return withVisual('diaper', {
 		id: event.id,
-		kind: 'diaper',
 		startAt: event.startAt,
-		label: `${formatLocalTime(event.startAt)} ${formatDiaperDetail(event)}`,
+		groupLocalDate: event.startLocalDate,
+		timeLabel: formatLocalTime(event.startAt),
+		title: 'Подгузник',
+		subtitle: kind.toLowerCase(),
+		searchText: joinSearch('подгузник', kind, event.notes),
 		isActive: false,
 		href: `/diaper/${event.id}`,
 		filterGroup: 'diaper',
-	}
+		otherGroup: 'all',
+	})
 }
 
 export function activityToTimeline (event: ActivityEvent): TimelineRow {
-	return {
+	const title = activityTypeLabel(event.type)
+	const subtitle =
+		event.durationSeconds != null && event.durationSeconds > 0
+			? formatDurationMs(event.durationSeconds * 1000)
+			: ''
+	return withVisual('activity', {
 		id: event.id,
-		kind: 'activity',
 		startAt: event.startAt,
-		label: `${formatLocalTime(event.startAt)} ${formatActivityDetail(event)}`,
+		groupLocalDate: event.startLocalDate,
+		timeLabel: formatLocalTime(event.startAt),
+		title,
+		subtitle,
+		searchText: joinSearch(title, event.place, event.notes),
 		isActive: false,
 		href: `/event/${event.id}?kind=activity`,
 		filterGroup: 'other',
-	}
+		otherGroup: 'activity',
+	})
 }
 
 export function temperatureToTimeline (event: TemperatureEvent): TimelineRow {
-	return {
+	const subtitle = formatTemperatureCelsius(event.celsius)
+	return withVisual('temperature', {
 		id: event.id,
-		kind: 'temperature',
 		startAt: event.startAt,
-		label: `${formatLocalTime(event.startAt)} ${formatTemperatureDetail(event)}`,
+		groupLocalDate: event.startLocalDate,
+		timeLabel: formatLocalTime(event.startAt),
+		title: 'Температура',
+		subtitle,
+		searchText: joinSearch('температура', subtitle, event.notes),
 		isActive: false,
 		href: `/event/${event.id}?kind=temperature`,
 		filterGroup: 'other',
-	}
+		otherGroup: 'temperature',
+	})
 }
 
 export function medicineToTimeline (event: MedicineEvent): TimelineRow {
-	return {
+	const title = event.kind === 'vitamin' ? 'Витамин' : 'Лекарство'
+	const subtitle = [
+		event.name,
+		event.doseText
+			? `${event.doseText}${event.unit ? ` ${event.unit}` : ''}`
+			: null,
+	]
+		.filter(Boolean)
+		.join(' · ')
+	return withVisual('medicine', {
 		id: event.id,
-		kind: 'medicine',
 		startAt: event.startAt,
-		label: `${formatLocalTime(event.startAt)} ${formatMedicineDetail(event)}`,
+		groupLocalDate: event.startLocalDate,
+		timeLabel: formatLocalTime(event.startAt),
+		title,
+		subtitle,
+		searchText: joinSearch(title, event.name, event.doseText, event.unit, event.notes),
 		isActive: false,
 		href: `/event/${event.id}?kind=medicine`,
 		filterGroup: 'other',
-	}
+		otherGroup: 'medicine',
+	})
 }
 
 export function noteToTimeline (event: NoteEvent): TimelineRow {
-	return {
+	const subtitle = event.title?.trim() || event.notes?.trim() || ''
+	return withVisual('note', {
 		id: event.id,
-		kind: 'note',
 		startAt: event.startAt,
-		label: `${formatLocalTime(event.startAt)} ${formatNoteDetail(event)}`,
+		groupLocalDate: event.startLocalDate,
+		timeLabel: formatLocalTime(event.startAt),
+		title: 'Заметка',
+		subtitle,
+		searchText: joinSearch('заметка', event.title, event.notes),
 		isActive: false,
 		href: `/event/${event.id}?kind=note`,
 		filterGroup: 'other',
-	}
+		otherGroup: 'all',
+	})
 }
 
 export function customToTimeline (event: CustomEvent): TimelineRow {
-	return {
+	const title = event.definitionName?.trim() || 'Своё событие'
+	const subtitle =
+		event.durationSeconds != null && event.durationSeconds > 0
+			? formatDurationMs(event.durationSeconds * 1000)
+			: ''
+	return withVisual('custom', {
 		id: event.id,
-		kind: 'custom',
 		startAt: event.startAt,
-		label: `${formatLocalTime(event.startAt)} ${formatCustomDetail(event)}`,
+		groupLocalDate: event.startLocalDate,
+		timeLabel: formatLocalTime(event.startAt),
+		title,
+		subtitle,
+		searchText: joinSearch(title, event.notes),
 		isActive: false,
 		href: `/event/${event.id}?kind=custom`,
 		filterGroup: 'other',
-	}
+		otherGroup: 'custom',
+	})
 }
 
-/** Latest diaper card summary: «Мокрый · 35 мин назад». */
-export function formatLatestDiaperSummary (
-	event: DiaperEvent,
-	agoLabel: string,
-): string {
-	return `${diaperKindLabel(event.kind)} · ${agoLabel}`
+export function matchesDiarySearch (
+	row: TimelineRow,
+	query: string,
+): boolean {
+	const q = query.trim().toLocaleLowerCase('ru')
+	if (!q) {
+		return true
+	}
+	return row.searchText.includes(q)
 }
 
-/** Compact feeding snippet for recent-events (reuse duration logic). */
-export function formatCompactFeeding (event: FeedingEvent, nowMs: number): string {
-	if (event.type === 'breastfeeding') {
-		const totals = breastfeedingLiveTotals(event, nowMs)
-		return `Грудь · ${formatDurationMs(totals.totalSeconds * 1000)}`
+export function matchesDiaryFilters (
+	row: TimelineRow,
+	filter: DiaryFilter,
+	otherFilter: DiaryOtherFilter,
+): boolean {
+	if (filter === 'all') {
+		return true
 	}
-	if (event.type === 'bottle') {
-		return `${bottleContentLabel(
-			event.feedingKind === 'formula' ? 'formula' : 'expressed_milk',
-		)} · ${formatMl(event.amountMl)}`
+	if (row.filterGroup !== filter) {
+		return false
 	}
-	return feedingTypeLabel(event.type, event.feedingKind)
+	if (filter === 'other' && otherFilter !== 'all') {
+		return row.otherGroup === otherFilter
+	}
+	return true
 }
