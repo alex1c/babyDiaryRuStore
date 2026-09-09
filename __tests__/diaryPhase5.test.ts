@@ -7,9 +7,12 @@ import { LATEST_SCHEMA_VERSION } from '../src/db/migrations'
 import { ChildRepository } from '../src/repositories/childRepository'
 import { DiaperRepository } from '../src/repositories/diaperRepository'
 import { FeedingRepository } from '../src/repositories/feedingRepository'
+import { DoctorVisitRepository } from '../src/repositories/doctorVisitRepository'
 import { MilestoneRepository } from '../src/repositories/milestoneRepository'
 import { QuickEventRepository } from '../src/repositories/quickEventRepository'
 import { SleepRepository } from '../src/repositories/sleepRepository'
+import { SymptomRepository } from '../src/repositories/symptomRepository'
+import { createMemoryPhotoStorage } from '../src/services/photoStorage'
 import {
 	clampLocalDateToToday,
 	formatDiaryDayLabel,
@@ -33,13 +36,24 @@ async function setup () {
 	const diaper = new DiaperRepository(db)
 	const quickEvents = new QuickEventRepository(db)
 	const milestones = new MilestoneRepository(db)
+	const healthDocs = createMemoryPhotoStorage('health-documents/')
+	const symptoms = new SymptomRepository(db, healthDocs)
+	const doctorVisits = new DoctorVisitRepository(db)
 	const child = await children.create({
 		name: 'Тест',
 		birthDate: '2026-06-01',
 	})
 	return {
 		db,
-		repos: { sleep, feeding, diaper, quickEvents, milestones },
+		repos: {
+			sleep,
+			feeding,
+			diaper,
+			quickEvents,
+			milestones,
+			symptoms,
+			doctorVisits,
+		},
 		childId: child.id,
 	}
 }

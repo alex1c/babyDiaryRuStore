@@ -1,8 +1,8 @@
 /**
- * More tab — entry to profile, settings, training.
+ * More tab — profile, settings, health, training.
  */
 
-import { Link } from 'expo-router'
+import { Link, type Href } from 'expo-router'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -11,7 +11,7 @@ import { useAppTheme } from '@/src/theme/ThemeProvider'
 import { radii, spacing, typography } from '@/src/theme/tokens'
 
 interface MoreLinkProps {
-	href: '/settings' | '/training' | '/profile'
+	href: Href
 	title: string
 	subtitle: string
 }
@@ -51,6 +51,11 @@ export default function MoreScreen () {
 			edges={['left', 'right']}
 		>
 			<ScrollView contentContainerStyle={styles.content}>
+				<MoreLink
+					href={'/health' as Href}
+					title="Здоровье"
+					subtitle="Температура, симптомы, лекарства и визиты"
+				/>
 				<MoreLink
 					href="/profile"
 					title="Профиль малыша"

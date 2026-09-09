@@ -40,6 +40,7 @@ export const EVENT_TYPES = [
 	'note',
 	'custom',
 	'milestone',
+	'symptom',
 ] as const
 
 export type EventType = (typeof EVENT_TYPES)[number]

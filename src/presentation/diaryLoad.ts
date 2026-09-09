@@ -7,10 +7,12 @@ import { aggregateDiapersForLocalDay } from '../domain/diaperLabels'
 import { aggregateFeedingsForLocalDay } from '../domain/feedingAggregation'
 import { aggregateSleepForLocalDay } from '../domain/sleepAggregation'
 import type { DiaperRepository } from '../repositories/diaperRepository'
+import type { DoctorVisitRepository } from '../repositories/doctorVisitRepository'
 import type { FeedingRepository } from '../repositories/feedingRepository'
 import type { MilestoneRepository } from '../repositories/milestoneRepository'
 import type { QuickEventRepository } from '../repositories/quickEventRepository'
 import type { SleepRepository } from '../repositories/sleepRepository'
+import type { SymptomRepository } from '../repositories/symptomRepository'
 import {
 	buildDiaryDaySummary,
 	type DiaryDaySummary,
@@ -19,12 +21,14 @@ import {
 	activityToTimeline,
 	customToTimeline,
 	diaperToTimeline,
+	doctorVisitToTimeline,
 	feedingToTimeline,
 	medicineToTimeline,
 	milestoneToTimeline,
 	noteToTimeline,
 	sleepToTimeline,
 	sleepToTimelineForDay,
+	symptomToTimeline,
 	temperatureToTimeline,
 	type TimelineRow,
 } from '../presentation/diaryTimeline'
@@ -37,6 +41,8 @@ export interface DiaryLoadRepos {
 	diaper: DiaperRepository
 	quickEvents: QuickEventRepository
 	milestones: MilestoneRepository
+	symptoms: SymptomRepository
+	doctorVisits: DoctorVisitRepository
 }
 
 export interface DiaryDayBundle {
@@ -84,6 +90,14 @@ export async function loadDiaryDay (
 		childId,
 		localDate,
 	)
+	const symptoms = await repos.symptoms.listByChildAndLocalDate(
+		childId,
+		localDate,
+	)
+	const visits = await repos.doctorVisits.listByChildAndLocalDate(
+		childId,
+		localDate,
+	)
 
 	const rows: TimelineRow[] = [
 		...sleeps.map((e) => sleepToTimelineForDay(e, localDate, nowMs)),
@@ -95,6 +109,8 @@ export async function loadDiaryDay (
 		...notes.map((e) => noteToTimeline(e)),
 		...customs.map((e) => customToTimeline(e)),
 		...milestones.map((e) => milestoneToTimeline(e)),
+		...symptoms.map((e) => symptomToTimeline(e)),
+		...visits.map((e) => doctorVisitToTimeline(e)),
 	]
 	rows.sort((a, b) => b.startAt.localeCompare(a.startAt))
 
@@ -132,6 +148,8 @@ export async function loadDiaryHistoryPage (
 		limit,
 	)
 	const milestones = await repos.milestones.listByChild(childId, limit)
+	const symptoms = await repos.symptoms.listByChild(childId, limit)
+	const visits = await repos.doctorVisits.listByChild(childId, limit)
 
 	const rows: TimelineRow[] = [
 		...sleeps.map((e) => sleepToTimeline(e, nowMs)),
@@ -143,6 +161,8 @@ export async function loadDiaryHistoryPage (
 		...notes.map((e) => noteToTimeline(e)),
 		...customs.map((e) => customToTimeline(e)),
 		...milestones.map((e) => milestoneToTimeline(e)),
+		...symptoms.map((e) => symptomToTimeline(e)),
+		...visits.map((e) => doctorVisitToTimeline(e)),
 	]
 	rows.sort((a, b) => b.startAt.localeCompare(a.startAt))
 	return rows.slice(0, limit)

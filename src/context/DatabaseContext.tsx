@@ -19,16 +19,23 @@ import type { SqlExecutor } from '../db/types'
 import type { ThemePreference } from '../models/types'
 import { ChildRepository } from '../repositories/childRepository'
 import { DiaperRepository } from '../repositories/diaperRepository'
+import { DoctorVisitRepository } from '../repositories/doctorVisitRepository'
 import { EventRepository } from '../repositories/eventRepository'
 import { FeedingRepository } from '../repositories/feedingRepository'
 import { GrowthRepository } from '../repositories/growthRepository'
+import { HealthAttachmentRepository } from '../repositories/healthAttachmentRepository'
+import { MedicineCatalogRepository } from '../repositories/medicineCatalogRepository'
 import { MilestoneRepository } from '../repositories/milestoneRepository'
 import { MomentRepository } from '../repositories/momentRepository'
 import { QuickEventRepository } from '../repositories/quickEventRepository'
 import { SettingsRepository } from '../repositories/settingsRepository'
 import { SleepRepository } from '../repositories/sleepRepository'
+import { SymptomRepository } from '../repositories/symptomRepository'
 import { ToothRepository } from '../repositories/toothRepository'
-import { getAppPhotoStorage } from '../services/appPhotoStorage'
+import {
+	getAppPhotoStorage,
+	getHealthDocumentStorage,
+} from '../services/appPhotoStorage'
 import { logger } from '../services/logger'
 import { lightColors, spacing, typography } from '../theme/tokens'
 
@@ -46,6 +53,10 @@ interface DatabaseContextValue {
 	milestones: MilestoneRepository | null
 	teeth: ToothRepository | null
 	moments: MomentRepository | null
+	symptoms: SymptomRepository | null
+	medicineCatalog: MedicineCatalogRepository | null
+	doctorVisits: DoctorVisitRepository | null
+	healthAttachments: HealthAttachmentRepository | null
 	settings: SettingsRepository | null
 	themePreference: ThemePreference
 	setThemePreferenceState: (preference: ThemePreference) => void
@@ -73,10 +84,15 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 				milestones: null,
 				teeth: null,
 				moments: null,
+				symptoms: null,
+				medicineCatalog: null,
+				doctorVisits: null,
+				healthAttachments: null,
 				settings: null,
 			}
 		}
 		const photos = getAppPhotoStorage()
+		const healthDocs = getHealthDocumentStorage()
 		return {
 			childrenRepo: new ChildRepository(db),
 			events: new EventRepository(db),
@@ -88,6 +104,10 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 			milestones: new MilestoneRepository(db),
 			teeth: new ToothRepository(db),
 			moments: new MomentRepository(db, photos),
+			symptoms: new SymptomRepository(db, healthDocs),
+			medicineCatalog: new MedicineCatalogRepository(db),
+			doctorVisits: new DoctorVisitRepository(db),
+			healthAttachments: new HealthAttachmentRepository(db, healthDocs),
 			settings: new SettingsRepository(db),
 		}
 	}, [db])
@@ -135,6 +155,10 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 		milestones: repos.milestones,
 		teeth: repos.teeth,
 		moments: repos.moments,
+		symptoms: repos.symptoms,
+		medicineCatalog: repos.medicineCatalog,
+		doctorVisits: repos.doctorVisits,
+		healthAttachments: repos.healthAttachments,
 		settings: repos.settings,
 		themePreference,
 		setThemePreferenceState,

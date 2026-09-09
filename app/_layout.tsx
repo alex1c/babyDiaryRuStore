@@ -167,6 +167,34 @@ function RootNavigator () {
 					options={{ title: 'Обучение', presentation: 'card' }}
 				/>
 				<Stack.Screen
+					name="health/index"
+					options={{ title: 'Здоровье', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="health/temperature"
+					options={{ title: 'Температура', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="health/symptom"
+					options={{ title: 'Симптом', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="health/medicine"
+					options={{ title: 'Лекарство', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="health/visit"
+					options={{ title: 'Визит к врачу', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="health/history"
+					options={{ title: 'История здоровья', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="health/documents"
+					options={{ title: 'Документы', presentation: 'card' }}
+				/>
+				<Stack.Screen
 					name="development/measure"
 					options={{ title: 'Измерение', presentation: 'card' }}
 				/>

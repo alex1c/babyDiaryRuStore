@@ -71,9 +71,7 @@ export function parseTemperatureCelsius (raw: string): number {
 		throw new QuickEventValidationError('Укажите температуру')
 	}
 	if (value < TEMP_MIN_C || value > TEMP_MAX_C) {
-		throw new QuickEventValidationError(
-			`Температура вне диапазона (${TEMP_MIN_C}–${TEMP_MAX_C} °C)`,
-		)
+		throw new QuickEventValidationError('Проверьте введённое значение')
 	}
 	return Math.round(value * 10) / 10
 }

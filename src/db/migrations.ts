@@ -304,6 +304,90 @@ CREATE TABLE month_photos (
 );
 `,
 	},
+	{
+		version: 7,
+		name: 'health_tracking',
+		sql: `
+PRAGMA foreign_keys = ON;
+
+-- Optional measurement method (axillary / ear / forehead / rectal / unset).
+ALTER TABLE event_temperature ADD COLUMN method TEXT;
+
+-- Link intake rows to user catalog (name snapshot stays on event_medicine.name).
+ALTER TABLE event_medicine ADD COLUMN catalog_id TEXT;
+
+-- User-defined medicine / vitamin catalog (not a drug database).
+CREATE TABLE medicine_catalog (
+	id TEXT PRIMARY KEY NOT NULL,
+	child_id TEXT NOT NULL,
+	kind TEXT NOT NULL,
+	name TEXT NOT NULL,
+	default_dose TEXT,
+	default_unit TEXT,
+	notes TEXT,
+	is_active INTEGER NOT NULL DEFAULT 1,
+	-- Reserved for future reminders (unused in Phase 7).
+	reminder_enabled INTEGER NOT NULL DEFAULT 0,
+	created_at TEXT NOT NULL,
+	updated_at TEXT NOT NULL,
+	FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_medicine_catalog_child
+	ON medicine_catalog(child_id, is_active, name);
+
+-- Symptom observations (events.type = 'symptom').
+CREATE TABLE event_symptom (
+	event_id TEXT PRIMARY KEY NOT NULL,
+	symptom_type TEXT NOT NULL,
+	custom_label TEXT,
+	severity TEXT,
+	photo_uri TEXT,
+	resolved_at TEXT,
+	FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
+-- Doctor visit records (observations / notes only — no diagnoses).
+CREATE TABLE doctor_visits (
+	id TEXT PRIMARY KEY NOT NULL,
+	child_id TEXT NOT NULL,
+	visited_at TEXT NOT NULL,
+	visited_local_date TEXT NOT NULL,
+	specialist_key TEXT NOT NULL,
+	specialist_label TEXT NOT NULL,
+	reason TEXT,
+	notes TEXT,
+	recommendations TEXT,
+	next_visit_at TEXT,
+	next_visit_local_date TEXT,
+	created_at TEXT NOT NULL,
+	updated_at TEXT NOT NULL,
+	FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_doctor_visits_child
+	ON doctor_visits(child_id, visited_at);
+
+-- Health attachments — URI/path only under health-documents/.
+CREATE TABLE health_attachments (
+	id TEXT PRIMARY KEY NOT NULL,
+	child_id TEXT NOT NULL,
+	owner_kind TEXT NOT NULL,
+	owner_id TEXT NOT NULL,
+	file_uri TEXT NOT NULL,
+	mime_hint TEXT,
+	title TEXT,
+	created_at TEXT NOT NULL,
+	updated_at TEXT NOT NULL,
+	FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_health_attachments_owner
+	ON health_attachments(owner_kind, owner_id);
+CREATE INDEX idx_health_attachments_child
+	ON health_attachments(child_id);
+`,
+	},
 ]
 
 export const LATEST_SCHEMA_VERSION =

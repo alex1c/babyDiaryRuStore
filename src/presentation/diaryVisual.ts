@@ -38,6 +38,10 @@ export function diaryVisualForKind (kind: TimelineKind): DiaryVisual {
 			return { iconKey: 'custom', accent: 'custom' }
 		case 'milestone':
 			return { iconKey: 'milestone', accent: 'custom' }
+		case 'symptom':
+			return { iconKey: 'health', accent: 'health' }
+		case 'doctor':
+			return { iconKey: 'health', accent: 'health' }
 	}
 }
 

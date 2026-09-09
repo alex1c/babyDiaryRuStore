@@ -26,6 +26,10 @@ const TABLE_NAMES = [
 	'teeth',
 	'moments',
 	'month_photos',
+	'medicine_catalog',
+	'event_symptom',
+	'doctor_visits',
+	'health_attachments',
 	'app_settings',
 	'schema_migrations',
 ] as const
@@ -324,25 +328,39 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return { changes: 1, lastInsertRowId: 0 }
 		}
 
-		if (/^UPDATE event_temperature SET celsius = \? WHERE event_id = \?$/i.test(normalized)) {
-			const [celsius, eventId] = params
+		if (/^UPDATE event_temperature SET/i.test(normalized)) {
+			const eventId = params[params.length - 1]
 			const row = this.tables.event_temperature.find((r) => r.event_id === eventId)
 			if (!row) {
 				return { changes: 0, lastInsertRowId: 0 }
 			}
-			row.celsius = celsius as number
+			if (/celsius = \?, method = \?/i.test(normalized)) {
+				row.celsius = params[0] as number
+				row.method = params[1] as string | null
+			} else {
+				row.celsius = params[0] as number
+			}
 			return { changes: 1, lastInsertRowId: 0 }
 		}
 
-		if (/^UPDATE event_medicine SET name = \?, dose_text = \?, unit = \? WHERE event_id = \?$/i.test(normalized)) {
-			const [name, dose, unit, eventId] = params
+		if (/^UPDATE event_medicine SET/i.test(normalized)) {
+			const eventId = params[params.length - 1]
 			const row = this.tables.event_medicine.find((r) => r.event_id === eventId)
 			if (!row) {
 				return { changes: 0, lastInsertRowId: 0 }
 			}
-			row.name = name as string
-			row.dose_text = dose as string | null
-			row.unit = unit as string | null
+			if (/catalog_id/i.test(normalized)) {
+				const [name, dose, unit, catalogId] = params
+				row.name = name as string
+				row.dose_text = dose as string | null
+				row.unit = unit as string | null
+				row.catalog_id = catalogId as string | null
+			} else {
+				const [name, dose, unit] = params
+				row.name = name as string
+				row.dose_text = dose as string | null
+				row.unit = unit as string | null
+			}
 			return { changes: 1, lastInsertRowId: 0 }
 		}
 
@@ -359,6 +377,71 @@ export class MemorySqlExecutor implements SqlExecutor {
 			row.photo_uri = photoUri as string | null
 			row.milestone_type = milestoneType as string | null
 			row.linked_moment_id = linkedMomentId as string | null
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE event_symptom SET/i.test(normalized)) {
+			const eventId = params[params.length - 1]
+			const row = this.tables.event_symptom.find((r) => r.event_id === eventId)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			const [symptomType, customLabel, severity, photoUri, resolvedAt] =
+				params
+			row.symptom_type = symptomType as string
+			row.custom_label = customLabel as string | null
+			row.severity = severity as string | null
+			row.photo_uri = photoUri as string | null
+			row.resolved_at = resolvedAt as string | null
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE medicine_catalog SET/i.test(normalized)) {
+			const id = params[params.length - 1]
+			const row = this.tables.medicine_catalog.find((r) => r.id === id)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			const [kind, name, defaultDose, defaultUnit, notes, isActive, updatedAt] =
+				params
+			row.kind = kind as string
+			row.name = name as string
+			row.default_dose = defaultDose as string | null
+			row.default_unit = defaultUnit as string | null
+			row.notes = notes as string | null
+			row.is_active = isActive as number
+			row.updated_at = updatedAt as string
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE doctor_visits SET/i.test(normalized)) {
+			const id = params[params.length - 1]
+			const row = this.tables.doctor_visits.find((r) => r.id === id)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			const [
+				visitedAt,
+				visitedLocalDate,
+				specialistKey,
+				specialistLabel,
+				reason,
+				notes,
+				recommendations,
+				nextVisitAt,
+				nextVisitLocalDate,
+				updatedAt,
+			] = params
+			row.visited_at = visitedAt as string
+			row.visited_local_date = visitedLocalDate as string
+			row.specialist_key = specialistKey as string
+			row.specialist_label = specialistLabel as string
+			row.reason = reason as string | null
+			row.notes = notes as string | null
+			row.recommendations = recommendations as string | null
+			row.next_visit_at = nextVisitAt as string | null
+			row.next_visit_local_date = nextVisitLocalDate as string | null
+			row.updated_at = updatedAt as string
 			return { changes: 1, lastInsertRowId: 0 }
 		}
 
@@ -593,6 +676,26 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return (rows[0] as T) ?? null
 		}
 
+		if (/INNER JOIN event_symptom/i.test(normalized)) {
+			const rows = this.querySymptomJoins(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
+		if (/FROM medicine_catalog/i.test(normalized)) {
+			const rows = this.queryMedicineCatalog(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
+		if (/FROM doctor_visits/i.test(normalized)) {
+			const rows = this.queryDoctorVisits(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
+		if (/FROM health_attachments/i.test(normalized)) {
+			const rows = this.queryHealthAttachments(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
 		if (/FROM growth_measurements/i.test(normalized)) {
 			const rows = this.queryGrowth(normalized, params)
 			return (rows[0] as T) ?? null
@@ -701,6 +804,28 @@ export class MemorySqlExecutor implements SqlExecutor {
 
 		if (/INNER JOIN event_milestone/i.test(normalized)) {
 			return this.queryMilestoneJoins(normalized, params) as T[]
+		}
+
+		if (/INNER JOIN event_symptom/i.test(normalized)) {
+			return this.querySymptomJoins(normalized, params) as T[]
+		}
+
+		if (/FROM medicine_catalog/i.test(normalized)) {
+			return this.queryMedicineCatalog(normalized, params) as T[]
+		}
+
+		if (/FROM doctor_visits/i.test(normalized)) {
+			return this.queryDoctorVisits(normalized, params) as T[]
+		}
+
+		if (/FROM health_attachments/i.test(normalized)) {
+			return this.queryHealthAttachments(normalized, params) as T[]
+		}
+
+		if (/SELECT event_id FROM event_symptom WHERE photo_uri = \?/i.test(normalized)) {
+			return this.tables.event_symptom
+				.filter((r) => r.photo_uri === params[0])
+				.map((r) => ({ event_id: r.event_id })) as T[]
 		}
 
 		if (/FROM growth_measurements/i.test(normalized)) {
@@ -1192,6 +1317,7 @@ export class MemorySqlExecutor implements SqlExecutor {
 			created_at: event.created_at ?? null,
 			updated_at: event.updated_at ?? null,
 			celsius: detail.celsius ?? null,
+			method: (detail.method as string | null) ?? null,
 		}
 	}
 
@@ -1252,6 +1378,7 @@ export class MemorySqlExecutor implements SqlExecutor {
 			dose_text: detail.dose_text ?? null,
 			unit: detail.unit ?? null,
 			kind: detail.kind ?? 'medicine',
+			catalog_id: (detail.catalog_id as string | null) ?? null,
 		}
 	}
 
@@ -1391,7 +1518,8 @@ export class MemorySqlExecutor implements SqlExecutor {
 		}
 		if (table === 'events' || table === 'recent_foods' || table === 'custom_event_definitions'
 			|| table === 'growth_measurements' || table === 'teeth' || table === 'moments'
-			|| table === 'month_photos') {
+			|| table === 'month_photos' || table === 'medicine_catalog'
+			|| table === 'doctor_visits' || table === 'health_attachments') {
 			if (row.child_id != null) {
 				const child = this.tables.children.find((c) => c.id === row.child_id)
 				if (!child) {
@@ -1409,6 +1537,7 @@ export class MemorySqlExecutor implements SqlExecutor {
 			table === 'event_medicine' ||
 			table === 'event_activity' ||
 			table === 'event_milestone' ||
+			table === 'event_symptom' ||
 			table === 'event_custom'
 		) {
 			const event = this.tables.events.find((e) => e.id === row.event_id)
@@ -1429,6 +1558,7 @@ export class MemorySqlExecutor implements SqlExecutor {
 			'event_medicine',
 			'event_activity',
 			'event_milestone',
+			'event_symptom',
 			'event_custom',
 		]
 		for (const table of detailTables) {
@@ -1466,6 +1596,136 @@ export class MemorySqlExecutor implements SqlExecutor {
 		this.tables.month_photos = this.tables.month_photos.filter(
 			(row) => row.child_id !== childId,
 		)
+		this.tables.medicine_catalog = this.tables.medicine_catalog.filter(
+			(row) => row.child_id !== childId,
+		)
+		this.tables.doctor_visits = this.tables.doctor_visits.filter(
+			(row) => row.child_id !== childId,
+		)
+		this.tables.health_attachments = this.tables.health_attachments.filter(
+			(row) => row.child_id !== childId,
+		)
+	}
+
+	private querySymptomJoins (sql: string, params: SqlParam[]): Row[] {
+		let rows: Row[] = this.tables.events
+			.filter((e) => e.type === 'symptom')
+			.map((e) => {
+				const s = this.tables.event_symptom.find(
+					(d) => d.event_id === e.id,
+				)
+				if (!s) {
+					return null
+				}
+				const row: Row = {
+					id: e.id as string,
+					child_id: e.child_id as string,
+					start_at: e.start_at as string,
+					start_local_date: e.start_local_date as string,
+					notes: (e.notes as string | null) ?? null,
+					created_at: e.created_at as string,
+					updated_at: e.updated_at as string,
+					symptom_type: s.symptom_type as string,
+					custom_label: (s.custom_label as string | null) ?? null,
+					severity: (s.severity as string | null) ?? null,
+					photo_uri: (s.photo_uri as string | null) ?? null,
+					resolved_at: (s.resolved_at as string | null) ?? null,
+				}
+				return row
+			})
+			.filter((r): r is Row => r != null)
+
+		if (/s\.resolved_at IS NULL/i.test(sql)) {
+			rows = rows.filter((r) => r.resolved_at == null)
+		}
+		if (/e\.id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.id === params[0])
+		} else if (/e\.child_id = \? AND e\.start_local_date = \?/i.test(sql)) {
+			rows = rows.filter(
+				(r) =>
+					r.child_id === params[0] &&
+					r.start_local_date === params[1],
+			)
+		} else if (/e\.child_id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.child_id === params[0])
+		}
+		rows.sort((a, b) =>
+			String(b.start_at).localeCompare(String(a.start_at)),
+		)
+		if (/LIMIT \?/i.test(sql)) {
+			const limit = params[params.length - 1]
+			if (typeof limit === 'number') {
+				rows = rows.slice(0, limit)
+			}
+		}
+		return rows
+	}
+
+	private queryMedicineCatalog (sql: string, params: SqlParam[]): Row[] {
+		let rows = [...this.tables.medicine_catalog]
+		if (/WHERE id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.id === params[0])
+		} else if (/child_id = \? AND kind = \?/i.test(sql)) {
+			rows = rows.filter(
+				(r) => r.child_id === params[0] && r.kind === params[1],
+			)
+		} else if (/child_id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.child_id === params[0])
+		}
+		if (/is_active = 1/i.test(sql)) {
+			rows = rows.filter((r) => Number(r.is_active) === 1)
+		}
+		rows.sort((a, b) =>
+			String(a.name).localeCompare(String(b.name), undefined, {
+				sensitivity: 'base',
+			}),
+		)
+		return rows
+	}
+
+	private queryDoctorVisits (sql: string, params: SqlParam[]): Row[] {
+		let rows = [...this.tables.doctor_visits]
+		if (/WHERE id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.id === params[0])
+		} else if (/child_id = \? AND visited_local_date = \?/i.test(sql)) {
+			rows = rows.filter(
+				(r) =>
+					r.child_id === params[0] &&
+					r.visited_local_date === params[1],
+			)
+		} else if (/child_id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.child_id === params[0])
+		}
+		rows.sort((a, b) =>
+			String(b.visited_at).localeCompare(String(a.visited_at)),
+		)
+		if (/LIMIT \?/i.test(sql)) {
+			const limit = params[params.length - 1]
+			if (typeof limit === 'number') {
+				rows = rows.slice(0, limit)
+			}
+		}
+		return rows
+	}
+
+	private queryHealthAttachments (sql: string, params: SqlParam[]): Row[] {
+		let rows = [...this.tables.health_attachments]
+		if (/WHERE id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.id === params[0])
+		} else if (/owner_kind = \? AND owner_id = \?/i.test(sql)) {
+			rows = rows.filter(
+				(r) =>
+					r.owner_kind === params[0] && r.owner_id === params[1],
+			)
+		} else if (/file_uri = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.file_uri === params[0])
+		} else if (/child_id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.child_id === params[0])
+		}
+		rows.sort((a, b) =>
+			String(b.created_at).localeCompare(String(a.created_at)),
+		)
+		return rows
 	}
 
 	private queryMilestoneJoins (sql: string, params: SqlParam[]): Row[] {

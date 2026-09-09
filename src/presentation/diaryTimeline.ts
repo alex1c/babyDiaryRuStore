@@ -19,6 +19,7 @@ import type { MilestoneEvent } from '../models/development'
 import type { DiaperEvent } from '../models/diaper'
 import type { FeedingEvent } from '../models/feeding'
 import type { SleepEvent } from '../models/sleep'
+import type { DoctorVisit, SymptomEvent } from '../models/health'
 import type {
 	ActivityEvent,
 	CustomEvent,
@@ -48,6 +49,8 @@ export type TimelineKind =
 	| 'note'
 	| 'custom'
 	| 'milestone'
+	| 'symptom'
+	| 'doctor'
 
 export type DiaryFilter = 'all' | 'sleep' | 'feeding' | 'diaper' | 'other'
 
@@ -58,6 +61,8 @@ export type DiaryOtherFilter =
 	| 'medicine'
 	| 'custom'
 	| 'milestone'
+	| 'symptom'
+	| 'doctor'
 
 export interface TimelineRow {
 	id: string
@@ -328,7 +333,7 @@ export function temperatureToTimeline (event: TemperatureEvent): TimelineRow {
 		subtitle,
 		searchText: joinSearch('температура', subtitle, event.notes),
 		isActive: false,
-		href: `/event/${event.id}?kind=temperature`,
+		href: `/health/temperature?id=${event.id}`,
 		filterGroup: 'other',
 		otherGroup: 'temperature',
 	})
@@ -353,7 +358,7 @@ export function medicineToTimeline (event: MedicineEvent): TimelineRow {
 		subtitle,
 		searchText: joinSearch(title, event.name, event.doseText, event.unit, event.notes),
 		isActive: false,
-		href: `/event/${event.id}?kind=medicine`,
+		href: `/health/medicine?id=${event.id}`,
 		filterGroup: 'other',
 		otherGroup: 'medicine',
 	})
@@ -411,6 +416,43 @@ export function milestoneToTimeline (event: MilestoneEvent): TimelineRow {
 		href: `/development/milestone/${event.id}`,
 		filterGroup: 'other',
 		otherGroup: 'milestone',
+	})
+}
+
+export function symptomToTimeline (event: SymptomEvent): TimelineRow {
+	return withVisual('symptom', {
+		id: event.id,
+		startAt: event.startAt,
+		groupLocalDate: event.startLocalDate,
+		timeLabel: formatLocalTime(event.startAt),
+		title: 'Симптом',
+		subtitle: event.title,
+		searchText: joinSearch('симптом', event.title, event.notes),
+		isActive: event.resolvedAt == null,
+		href: `/health/symptom?id=${event.id}`,
+		filterGroup: 'other',
+		otherGroup: 'symptom',
+	})
+}
+
+export function doctorVisitToTimeline (visit: DoctorVisit): TimelineRow {
+	return withVisual('doctor', {
+		id: visit.id,
+		startAt: visit.visitedAt,
+		groupLocalDate: visit.visitedLocalDate,
+		timeLabel: formatLocalTime(visit.visitedAt),
+		title: visit.specialistLabel,
+		subtitle: visit.reason?.trim() || 'Визит к врачу',
+		searchText: joinSearch(
+			visit.specialistLabel,
+			visit.reason,
+			visit.notes,
+			'врач',
+		),
+		isActive: false,
+		href: `/health/visit?id=${visit.id}`,
+		filterGroup: 'other',
+		otherGroup: 'doctor',
 	})
 }
 

@@ -1,5 +1,5 @@
 /**
- * Managed photo storage — filesystem URIs only, never SQLite BLOBs.
+ * Managed file storage — filesystem URIs only, never SQLite BLOBs.
  * Abstraction keeps unit tests free of real FS / Expo FileSystem.
  */
 
@@ -7,7 +7,7 @@ import { createEntityId } from '../domain/ids'
 
 export interface PhotoStorage {
 	/**
-	 * Copy a user-picked URI into the app-managed moments directory.
+	 * Copy a user-picked URI into the managed directory.
 	 * Returns the managed file URI/path.
 	 */
 	importFromUri (sourceUri: string): Promise<string>
@@ -15,10 +15,10 @@ export interface PhotoStorage {
 	/** Delete a managed file if it exists; no-op for non-managed URIs. */
 	deleteManaged (uri: string): Promise<void>
 
-	/** True when URI lives under the managed moments root. */
+	/** True when URI lives under this storage's managed root. */
 	isManaged (uri: string): boolean
 
-	/** Root prefix used for managed photos (for backup layout later). */
+	/** Root prefix used for managed files (for backup layout later). */
 	managedRoot (): string
 }
 
@@ -34,38 +34,40 @@ export interface PhotoStorageDeps {
 	createId?: () => Promise<string>
 }
 
-const MOMENTS_SUBDIR = 'moments/'
+export const MOMENTS_SUBDIR = 'moments/'
+export const HEALTH_DOCS_SUBDIR = 'health-documents/'
 
 /**
- * Create filesystem-backed photo storage under documentDirectory/moments/.
+ * Create filesystem-backed storage under documentDirectory/<subdir>/.
  */
 export function createFilePhotoStorage (
 	deps: PhotoStorageDeps,
+	subdir: string = MOMENTS_SUBDIR,
 ): PhotoStorage {
 	const root = ensureTrailingSlash(deps.documentDirectory ?? '')
-	const momentsRoot = `${root}${MOMENTS_SUBDIR}`
+	const managed = `${root}${ensureTrailingSlash(subdir)}`
 	const createId = deps.createId ?? createEntityId
 
 	return {
 		managedRoot (): string {
-			return momentsRoot
+			return managed
 		},
 
 		isManaged (uri: string): boolean {
-			if (!uri || !momentsRoot) {
+			if (!uri || !managed) {
 				return false
 			}
-			return uri.startsWith(momentsRoot)
+			return uri.startsWith(managed)
 		},
 
 		async importFromUri (sourceUri: string): Promise<string> {
 			if (!root) {
 				throw new Error('Document directory is unavailable')
 			}
-			await deps.makeDirectoryAsync(momentsRoot, { intermediates: true })
+			await deps.makeDirectoryAsync(managed, { intermediates: true })
 			const ext = extensionFromUri(sourceUri)
 			const id = await createId()
-			const dest = `${momentsRoot}${id}${ext}`
+			const dest = `${managed}${id}${ext}`
 			await deps.copyAsync({ from: sourceUri, to: dest })
 			return dest
 		},
@@ -86,12 +88,14 @@ export function createFilePhotoStorage (
 	}
 }
 
-/** In-memory photo storage for Jest (no real filesystem). */
-export function createMemoryPhotoStorage (): PhotoStorage & {
+/** In-memory storage for Jest (no real filesystem). */
+export function createMemoryPhotoStorage (
+	subdir: string = MOMENTS_SUBDIR,
+): PhotoStorage & {
 	files: Map<string, string>
 } {
 	const files = new Map<string, string>()
-	const root = 'memory://moments/'
+	const root = `memory://${ensureTrailingSlash(subdir)}`
 	let counter = 0
 
 	return {
@@ -104,7 +108,7 @@ export function createMemoryPhotoStorage (): PhotoStorage & {
 		},
 		async importFromUri (sourceUri: string): Promise<string> {
 			counter += 1
-			const dest = `${root}photo-${counter}.jpg`
+			const dest = `${root}file-${counter}${extensionFromUri(sourceUri)}`
 			files.set(dest, sourceUri)
 			return dest
 		},

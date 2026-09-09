@@ -4,6 +4,8 @@
 
 import type { DateOnly, OffsetDateTime, UtcInstant } from './types'
 
+import type { TemperatureMethod } from './health'
+
 export type ActivityEventType = 'walk' | 'bath' | 'tummy_time' | 'massage' | 'doctor'
 
 export type MedicineKind = 'medicine' | 'vitamin'
@@ -34,6 +36,7 @@ export interface TemperatureEvent {
 	createdAt: UtcInstant
 	updatedAt: UtcInstant
 	celsius: number
+	method: TemperatureMethod
 }
 
 export interface MedicineEvent {
@@ -51,6 +54,7 @@ export interface MedicineEvent {
 	name: string
 	doseText: string | null
 	unit: string | null
+	catalogId: string | null
 }
 
 export interface NoteEvent {

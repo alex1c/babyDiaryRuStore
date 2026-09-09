@@ -12,15 +12,17 @@ import { LATEST_SCHEMA_VERSION, MIGRATIONS } from '../src/db/migrations'
 describe('migrations', () => {
 	it('exposes a monotonic schema version sequence', () => {
 		expect(MIGRATIONS.length).toBeGreaterThan(0)
-		expect(LATEST_SCHEMA_VERSION).toBe(6)
-		expect(getExpectedSchemaVersion()).toBe(6)
-		expect(MIGRATIONS.map((m) => m.version)).toEqual([1, 2, 3, 4, 5, 6])
+		expect(LATEST_SCHEMA_VERSION).toBe(7)
+		expect(getExpectedSchemaVersion()).toBe(7)
+		expect(MIGRATIONS.map((m) => m.version)).toEqual([
+			1, 2, 3, 4, 5, 6, 7,
+		])
 
-		const v6 = MIGRATIONS[5]?.sql ?? ''
-		expect(v6).toContain('growth_measurements')
-		expect(v6).toContain('moments')
-		expect(v6).toContain('month_photos')
-		expect(v6).toContain('teeth')
+		const v7 = MIGRATIONS[6]?.sql ?? ''
+		expect(v7).toContain('medicine_catalog')
+		expect(v7).toContain('event_symptom')
+		expect(v7).toContain('doctor_visits')
+		expect(v7).toContain('health_attachments')
 	})
 
 	it('is a no-op when already at latest version', async () => {
@@ -45,24 +47,25 @@ describe('migrations', () => {
 			'4:diaper_details_and_quick_events',
 			'5:diary_query_indexes',
 			'6:growth_milestones_moments',
+			'7:health_tracking',
 		])
-		expect(db.getTable('schema_migrations')).toHaveLength(6)
+		expect(db.getTable('schema_migrations')).toHaveLength(7)
 	})
 
-	it('upgrades from v5 to v6', async () => {
+	it('upgrades from v6 to v7', async () => {
 		const db = new MemorySqlExecutor()
-		db.markMigrated(5)
+		db.markMigrated(6)
 		const result = await migrateDatabase(db)
-		expect(result.fromVersion).toBe(5)
-		expect(result.toVersion).toBe(6)
-		expect(result.applied).toEqual(['6:growth_milestones_moments'])
+		expect(result.fromVersion).toBe(6)
+		expect(result.toVersion).toBe(7)
+		expect(result.applied).toEqual(['7:health_tracking'])
 	})
 
-	it('repeated migrate at v6 is idempotent', async () => {
+	it('repeated migrate at v7 is idempotent', async () => {
 		const db = new MemorySqlExecutor()
 		await migrateDatabase(db)
 		const again = await migrateDatabase(db)
 		expect(again.applied).toEqual([])
-		expect(again.toVersion).toBe(6)
+		expect(again.toVersion).toBe(7)
 	})
 })

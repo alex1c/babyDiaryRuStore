@@ -21,6 +21,8 @@ import type {
 	TemperatureEvent,
 } from '../models/quickEvents'
 import { isActivityEventType } from '../models/quickEvents'
+import type { TemperatureMethod } from '../models/health'
+import { isTemperatureMethod } from '../domain/healthLabels'
 import {
 	buildEventStart,
 	localDateFromOffsetDateTime,
@@ -44,6 +46,7 @@ export interface CreateTemperatureInput {
 	celsiusRaw: string
 	occurredAt?: string
 	notes?: string | null
+	method?: TemperatureMethod | null
 }
 
 export interface CreateMedicineInput {
@@ -54,6 +57,7 @@ export interface CreateMedicineInput {
 	doseText?: string | null
 	unit?: string | null
 	notes?: string | null
+	catalogId?: string | null
 }
 
 export interface CreateNoteInput {
@@ -102,6 +106,7 @@ interface TempJoinRow {
 	created_at: string
 	updated_at: string
 	celsius: number
+	method: string | null
 }
 
 interface MedicineJoinRow {
@@ -119,6 +124,7 @@ interface MedicineJoinRow {
 	dose_text: string | null
 	unit: string | null
 	kind: string | null
+	catalog_id: string | null
 }
 
 interface NoteRow {
@@ -170,7 +176,8 @@ const ACTIVITY_SELECT = `
 
 const TEMP_SELECT = `
 	SELECT e.id, e.child_id, e.start_at, e.end_at, e.start_local_date,
-	       e.end_local_date, e.notes, e.created_at, e.updated_at, t.celsius
+	       e.end_local_date, e.notes, e.created_at, e.updated_at,
+	       t.celsius, t.method
 	FROM events e
 	INNER JOIN event_temperature t ON t.event_id = e.id
 	WHERE e.type = 'temperature'
@@ -179,7 +186,7 @@ const TEMP_SELECT = `
 const MEDICINE_SELECT = `
 	SELECT e.id, e.child_id, e.type, e.start_at, e.end_at, e.start_local_date,
 	       e.end_local_date, e.notes, e.created_at, e.updated_at,
-	       m.name, m.dose_text, m.unit, m.kind
+	       m.name, m.dose_text, m.unit, m.kind, m.catalog_id
 	FROM events e
 	INNER JOIN event_medicine m ON m.event_id = e.id
 	WHERE e.type IN ('medicine','vitamin')
@@ -229,6 +236,10 @@ function mapActivity (row: ActivityJoinRow): ActivityEvent {
 }
 
 function mapTemp (row: TempJoinRow): TemperatureEvent {
+	const methodRaw = row.method ?? 'unset'
+	const method: TemperatureMethod = isTemperatureMethod(methodRaw)
+		? methodRaw
+		: 'unset'
 	return {
 		id: row.id,
 		childId: row.child_id,
@@ -240,6 +251,7 @@ function mapTemp (row: TempJoinRow): TemperatureEvent {
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 		celsius: row.celsius,
+		method,
 	}
 }
 
@@ -262,6 +274,7 @@ function mapMedicine (row: MedicineJoinRow): MedicineEvent {
 		name: row.name,
 		doseText: row.dose_text,
 		unit: row.unit,
+		catalogId: row.catalog_id ?? null,
 	}
 }
 
@@ -492,9 +505,10 @@ export class QuickEventRepository {
 				audit,
 			)
 			await tx.runAsync(
-				`INSERT INTO event_temperature (event_id, celsius) VALUES (?, ?)`,
+				`INSERT INTO event_temperature (event_id, celsius, method) VALUES (?, ?, ?)`,
 				id,
 				celsius,
+				input.method ?? 'unset',
 			)
 		})
 
@@ -545,6 +559,7 @@ export class QuickEventRepository {
 			celsiusRaw?: string
 			occurredAt?: string
 			notes?: string | null
+			method?: TemperatureMethod | null
 		},
 	): Promise<TemperatureEvent> {
 		const existing = await this.getTemperatureById(eventId)
@@ -561,6 +576,10 @@ export class QuickEventRepository {
 			input.notes !== undefined
 				? input.notes?.trim() || null
 				: existing.notes
+		const method =
+			input.method !== undefined
+				? (input.method ?? 'unset')
+				: existing.method
 		const audit = nowUtcInstant()
 
 		await this.db.withTransactionAsync(async (tx) => {
@@ -578,8 +597,9 @@ export class QuickEventRepository {
 				eventId,
 			)
 			await tx.runAsync(
-				`UPDATE event_temperature SET celsius = ? WHERE event_id = ?`,
+				`UPDATE event_temperature SET celsius = ?, method = ? WHERE event_id = ?`,
 				celsius,
+				method,
 				eventId,
 			)
 		})
@@ -621,13 +641,14 @@ export class QuickEventRepository {
 			)
 			await tx.runAsync(
 				`INSERT INTO event_medicine (
-					event_id, name, dose_text, unit, kind
-				) VALUES (?, ?, ?, ?, ?)`,
+					event_id, name, dose_text, unit, kind, catalog_id
+				) VALUES (?, ?, ?, ?, ?, ?)`,
 				id,
 				name,
 				input.doseText?.trim() || null,
 				input.unit?.trim() || null,
 				input.kind,
+				input.catalogId ?? null,
 			)
 		})
 
@@ -711,6 +732,7 @@ export class QuickEventRepository {
 			unit?: string | null
 			occurredAt?: string
 			notes?: string | null
+			catalogId?: string | null
 		},
 	): Promise<MedicineEvent> {
 		const existing = await this.getMedicineById(eventId)
@@ -735,6 +757,10 @@ export class QuickEventRepository {
 			input.unit !== undefined
 				? input.unit?.trim() || null
 				: existing.unit
+		const catalogId =
+			input.catalogId !== undefined
+				? input.catalogId
+				: existing.catalogId
 		const audit = nowUtcInstant()
 
 		await this.db.withTransactionAsync(async (tx) => {
@@ -752,11 +778,13 @@ export class QuickEventRepository {
 				eventId,
 			)
 			await tx.runAsync(
-				`UPDATE event_medicine SET name = ?, dose_text = ?, unit = ?
+				`UPDATE event_medicine SET
+					name = ?, dose_text = ?, unit = ?, catalog_id = ?
 				 WHERE event_id = ?`,
 				name,
 				doseText,
 				unit,
+				catalogId,
 				eventId,
 			)
 		})
