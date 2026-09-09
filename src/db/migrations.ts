@@ -162,6 +162,35 @@ PRAGMA foreign_keys = ON;
 ALTER TABLE event_sleep ADD COLUMN sleep_type TEXT NOT NULL DEFAULT 'auto';
 `,
 	},
+	{
+		version: 3,
+		name: 'feeding_details_and_recent_foods',
+		sql: `
+PRAGMA foreign_keys = ON;
+
+-- Breastfeeding side segments + bottle/solid extras on event_feeding.
+ALTER TABLE event_feeding ADD COLUMN left_duration_seconds INTEGER;
+ALTER TABLE event_feeding ADD COLUMN right_duration_seconds INTEGER;
+ALTER TABLE event_feeding ADD COLUMN initial_side TEXT;
+ALTER TABLE event_feeding ADD COLUMN last_side TEXT;
+ALTER TABLE event_feeding ADD COLUMN side_started_at TEXT;
+ALTER TABLE event_feeding ADD COLUMN bottle_content TEXT;
+ALTER TABLE event_feeding ADD COLUMN amount_text TEXT;
+ALTER TABLE event_feeding ADD COLUMN reaction TEXT;
+
+CREATE TABLE recent_foods (
+	id TEXT PRIMARY KEY NOT NULL,
+	child_id TEXT NOT NULL,
+	name TEXT NOT NULL,
+	last_used_at TEXT NOT NULL,
+	use_count INTEGER NOT NULL DEFAULT 1,
+	FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE,
+	UNIQUE (child_id, name)
+);
+
+CREATE INDEX idx_recent_foods_child ON recent_foods(child_id, last_used_at);
+`,
+	},
 ]
 
 export const LATEST_SCHEMA_VERSION =

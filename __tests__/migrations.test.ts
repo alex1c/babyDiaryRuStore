@@ -12,9 +12,9 @@ import { LATEST_SCHEMA_VERSION, MIGRATIONS } from '../src/db/migrations'
 describe('migrations', () => {
 	it('exposes a monotonic schema version sequence', () => {
 		expect(MIGRATIONS.length).toBeGreaterThan(0)
-		expect(LATEST_SCHEMA_VERSION).toBe(2)
-		expect(getExpectedSchemaVersion()).toBe(2)
-		expect(MIGRATIONS.map((m) => m.version)).toEqual([1, 2])
+		expect(LATEST_SCHEMA_VERSION).toBe(3)
+		expect(getExpectedSchemaVersion()).toBe(3)
+		expect(MIGRATIONS.map((m) => m.version)).toEqual([1, 2, 3])
 
 		const v1 = MIGRATIONS[0]?.sql ?? ''
 		expect(v1).toContain('CREATE TABLE children')
@@ -28,6 +28,10 @@ describe('migrations', () => {
 
 		const v2 = MIGRATIONS[1]?.sql ?? ''
 		expect(v2).toContain('sleep_type')
+
+		const v3 = MIGRATIONS[2]?.sql ?? ''
+		expect(v3).toContain('left_duration_seconds')
+		expect(v3).toContain('recent_foods')
 	})
 
 	it('is a no-op when already at latest version', async () => {
@@ -48,8 +52,9 @@ describe('migrations', () => {
 		expect(result.applied).toEqual([
 			'1:initial_schema',
 			'2:sleep_type_on_event_sleep',
+			'3:feeding_details_and_recent_foods',
 		])
-		expect(db.getTable('schema_migrations')).toHaveLength(2)
+		expect(db.getTable('schema_migrations')).toHaveLength(3)
 	})
 
 	it('upgrades from v1 preserving children data', async () => {
@@ -72,8 +77,11 @@ describe('migrations', () => {
 
 		const result = await migrateDatabase(db)
 		expect(result.fromVersion).toBe(1)
-		expect(result.toVersion).toBe(2)
-		expect(result.applied).toEqual(['2:sleep_type_on_event_sleep'])
+		expect(result.toVersion).toBe(3)
+		expect(result.applied).toEqual([
+			'2:sleep_type_on_event_sleep',
+			'3:feeding_details_and_recent_foods',
+		])
 		expect(db.getTable('children')).toHaveLength(1)
 		expect(db.getTable('children')[0]?.name).toBe('Mila')
 	})

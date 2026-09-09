@@ -21,6 +21,7 @@ const TABLE_NAMES = [
 	'event_milestone',
 	'custom_event_definitions',
 	'event_custom',
+	'recent_foods',
 	'app_settings',
 	'schema_migrations',
 ] as const
@@ -206,6 +207,94 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return { changes: 1, lastInsertRowId: 0 }
 		}
 
+		if (/^UPDATE event_feeding SET/i.test(normalized)) {
+			const eventId = params[params.length - 1]
+			const row = this.tables.event_feeding.find((r) => r.event_id === eventId)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			if (/left_duration_seconds = \?, right_duration_seconds = \?, last_side = \?, side_started_at = \?/i.test(normalized)) {
+				const [left, right, lastSide, sideStartedAt] = params
+				row.left_duration_seconds = left as number
+				row.right_duration_seconds = right as number
+				row.last_side = lastSide as string
+				row.side_started_at = sideStartedAt as string | null
+				return { changes: 1, lastInsertRowId: 0 }
+			}
+			if (/left_duration_seconds = \?, right_duration_seconds = \?, side_started_at = NULL, duration_seconds = \?/i.test(normalized)) {
+				const [left, right, duration] = params
+				row.left_duration_seconds = left as number
+				row.right_duration_seconds = right as number
+				row.side_started_at = null
+				row.duration_seconds = duration as number
+				return { changes: 1, lastInsertRowId: 0 }
+			}
+			if (/side_started_at = CASE WHEN/i.test(normalized)) {
+				const [left, right, duration, endAt] = params
+				row.left_duration_seconds = left as number
+				row.right_duration_seconds = right as number
+				row.duration_seconds = duration as number
+				if (endAt != null) {
+					row.side_started_at = null
+				}
+				return { changes: 1, lastInsertRowId: 0 }
+			}
+			if (/left_duration_seconds = \?, right_duration_seconds = \?, duration_seconds = \?/i.test(normalized)) {
+				const [left, right, duration] = params
+				row.left_duration_seconds = left as number
+				row.right_duration_seconds = right as number
+				row.duration_seconds = duration as number
+				return { changes: 1, lastInsertRowId: 0 }
+			}
+			if (/feeding_kind = \?, amount_ml = \?, bottle_content = \?/i.test(normalized)) {
+				const [kind, amount, content] = params
+				row.feeding_kind = kind as string
+				row.amount_ml = amount as number
+				row.bottle_content = content as string
+				return { changes: 1, lastInsertRowId: 0 }
+			}
+			if (/food_name = \?, amount_text = \?, reaction = \?/i.test(normalized)) {
+				const [food, amountText, reaction] = params
+				row.food_name = food as string
+				row.amount_text = amountText as string | null
+				row.reaction = reaction as string | null
+				return { changes: 1, lastInsertRowId: 0 }
+			}
+			if (/side = \?, amount_ml = \?, duration_seconds = \?/i.test(normalized)) {
+				const [side, amount, duration] = params
+				row.side = side as string | null
+				row.amount_ml = amount as number | null
+				row.duration_seconds = duration as number | null
+				return { changes: 1, lastInsertRowId: 0 }
+			}
+			if (/amount_ml = \? WHERE event_id = \?$/i.test(normalized)) {
+				row.amount_ml = params[0] as number
+				return { changes: 1, lastInsertRowId: 0 }
+			}
+			throw new Error(`Unsupported event_feeding UPDATE: ${normalized}`)
+		}
+
+		if (/^UPDATE events SET updated_at = \? WHERE id = \?$/i.test(normalized)) {
+			const [updatedAt, id] = params
+			const event = this.tables.events.find((r) => r.id === id)
+			if (!event) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			event.updated_at = updatedAt as string
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE recent_foods SET last_used_at = \?, use_count = \? WHERE id = \?$/i.test(normalized)) {
+			const [lastUsed, useCount, id] = params
+			const row = this.tables.recent_foods.find((r) => r.id === id)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			row.last_used_at = lastUsed as string
+			row.use_count = useCount as number
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
 		if (/^UPDATE events SET start_at = \?, end_at = \?, start_local_date = \?, end_local_date = \?, notes = \?, updated_at = \? WHERE id = \?$/i.test(normalized)) {
 			const [
 				startAt,
@@ -315,6 +404,11 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return (rows[0] as T) ?? null
 		}
 
+		if (/INNER JOIN event_feeding/i.test(normalized)) {
+			const rows = this.queryFeedingJoins(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
 		const byId = normalized.match(/^SELECT \* FROM (\w+) WHERE id = \?$/i)
 		if (byId) {
 			const table = byId[1]
@@ -323,6 +417,16 @@ export class MemorySqlExecutor implements SqlExecutor {
 			}
 			const row = this.tables[table].find((r) => r.id === params[0])
 			return (row as T) ?? null
+		}
+
+		if (/^SELECT id, use_count FROM recent_foods WHERE child_id = \? AND name = \?$/i.test(normalized)) {
+			const [childId, name] = params
+			const row = this.tables.recent_foods.find(
+				(r) => r.child_id === childId && r.name === name,
+			)
+			return row
+				? ({ id: row.id, use_count: row.use_count } as T)
+				: null
 		}
 
 		if (/^SELECT value FROM app_settings WHERE key = \?$/i.test(normalized)) {
@@ -341,6 +445,27 @@ export class MemorySqlExecutor implements SqlExecutor {
 
 		if (/INNER JOIN event_sleep/i.test(normalized)) {
 			return this.querySleepJoins(normalized, params) as T[]
+		}
+
+		if (/INNER JOIN event_feeding/i.test(normalized)) {
+			return this.queryFeedingJoins(normalized, params) as T[]
+		}
+
+		if (/^SELECT name FROM recent_foods WHERE child_id = \?/i.test(normalized)) {
+			const [childId, limit] = params
+			return [...this.tables.recent_foods]
+				.filter((r) => r.child_id === childId)
+				.sort((a, b) => {
+					const byTime = String(b.last_used_at).localeCompare(
+						String(a.last_used_at),
+					)
+					if (byTime !== 0) {
+						return byTime
+					}
+					return Number(b.use_count) - Number(a.use_count)
+				})
+				.slice(0, typeof limit === 'number' ? limit : undefined)
+				.map((r) => ({ name: r.name })) as T[]
 		}
 
 		if (/^SELECT \* FROM children ORDER BY/i.test(normalized)) {
@@ -414,6 +539,108 @@ export class MemorySqlExecutor implements SqlExecutor {
 			sleep_type: detail.sleep_type ?? 'auto',
 			quality: detail.quality ?? null,
 		}
+	}
+
+	private joinFeedingRow (event: Row): Row | null {
+		const detail = this.tables.event_feeding.find(
+			(f) => f.event_id === event.id,
+		)
+		if (!detail) {
+			return null
+		}
+		return {
+			id: event.id ?? null,
+			child_id: event.child_id ?? null,
+			type: event.type ?? null,
+			start_at: event.start_at ?? null,
+			end_at: event.end_at ?? null,
+			start_local_date: event.start_local_date ?? null,
+			end_local_date: event.end_local_date ?? null,
+			notes: event.notes ?? null,
+			created_at: event.created_at ?? null,
+			updated_at: event.updated_at ?? null,
+			feeding_kind: detail.feeding_kind ?? null,
+			side: detail.side ?? null,
+			amount_ml: detail.amount_ml ?? null,
+			duration_seconds: detail.duration_seconds ?? null,
+			food_name: detail.food_name ?? null,
+			left_duration_seconds: detail.left_duration_seconds ?? null,
+			right_duration_seconds: detail.right_duration_seconds ?? null,
+			initial_side: detail.initial_side ?? null,
+			last_side: detail.last_side ?? null,
+			side_started_at: detail.side_started_at ?? null,
+			bottle_content: detail.bottle_content ?? null,
+			amount_text: detail.amount_text ?? null,
+			reaction: detail.reaction ?? null,
+		}
+	}
+
+	private queryFeedingJoins (
+		sql: string,
+		params: SqlParam[],
+	): Row[] {
+		const feedingTypes = new Set([
+			'breastfeeding',
+			'bottle',
+			'pumping',
+			'water',
+			'solid_food',
+		])
+		let rows = this.tables.events
+			.filter((e) => feedingTypes.has(String(e.type)))
+			.map((e) => this.joinFeedingRow(e))
+			.filter((r): r is Row => r != null)
+
+		if (/AND e\.id = \?/i.test(sql)) {
+			const id = params[0]
+			return rows.filter((r) => r.id === id)
+		}
+
+		if (
+			/AND e\.child_id = \? AND e\.type = 'breastfeeding' AND e\.end_at IS NULL/i.test(
+				sql,
+			)
+		) {
+			const childId = params[0]
+			return rows
+				.filter(
+					(r) =>
+						r.child_id === childId &&
+						r.type === 'breastfeeding' &&
+						r.end_at == null,
+				)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+				.slice(0, 1)
+		}
+
+		if (/AND e\.child_id = \? AND e\.start_local_date = \?/i.test(sql)) {
+			const [childId, localDate] = params
+			return rows
+				.filter(
+					(r) =>
+						r.child_id === childId &&
+						r.start_local_date === localDate,
+				)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+		}
+
+		if (/AND e\.child_id = \?/i.test(sql)) {
+			const childId = params[0]
+			const limit =
+				typeof params[1] === 'number' ? params[1] : rows.length
+			return rows
+				.filter((r) => r.child_id === childId)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+				.slice(0, limit)
+		}
+
+		return rows
 	}
 
 	private querySleepJoins (
@@ -506,10 +733,12 @@ export class MemorySqlExecutor implements SqlExecutor {
 		if (!this.foreignKeysEnabled) {
 			return
 		}
-		if (table === 'events') {
+		if (table === 'events' || table === 'recent_foods') {
 			const child = this.tables.children.find((c) => c.id === row.child_id)
 			if (!child) {
-				throw new Error('FOREIGN KEY constraint failed: events.child_id')
+				throw new Error(
+					`FOREIGN KEY constraint failed: ${table}.child_id`,
+				)
 			}
 		}
 		if (
@@ -561,6 +790,9 @@ export class MemorySqlExecutor implements SqlExecutor {
 		}
 		this.tables.app_settings = this.tables.app_settings.filter(
 			(row) => !(row.key === 'activeChildId' && row.value === childId),
+		)
+		this.tables.recent_foods = this.tables.recent_foods.filter(
+			(row) => row.child_id !== childId,
 		)
 	}
 }

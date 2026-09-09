@@ -107,6 +107,38 @@ function RootNavigator () {
 					options={{ title: 'Сон', presentation: 'card' }}
 				/>
 				<Stack.Screen
+					name="feeding/index"
+					options={{ title: 'Кормление', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="feeding/active"
+					options={{ title: 'Кормление', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="feeding/bottle"
+					options={{ title: 'Бутылочка', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="feeding/water"
+					options={{ title: 'Вода', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="feeding/pumping"
+					options={{ title: 'Сцеживание', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="feeding/solid"
+					options={{ title: 'Прикорм', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="feeding/manual"
+					options={{ title: 'ГВ вручную', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="feeding/[id]"
+					options={{ title: 'Кормление', presentation: 'card' }}
+				/>
+				<Stack.Screen
 					name="settings"
 					options={{ title: 'Настройки', presentation: 'card' }}
 				/>

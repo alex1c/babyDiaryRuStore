@@ -19,6 +19,7 @@ import type { SqlExecutor } from '../db/types'
 import type { ThemePreference } from '../models/types'
 import { ChildRepository } from '../repositories/childRepository'
 import { EventRepository } from '../repositories/eventRepository'
+import { FeedingRepository } from '../repositories/feedingRepository'
 import { SettingsRepository } from '../repositories/settingsRepository'
 import { SleepRepository } from '../repositories/sleepRepository'
 import { logger } from '../services/logger'
@@ -31,6 +32,7 @@ interface DatabaseContextValue {
 	childrenRepo: ChildRepository | null
 	events: EventRepository | null
 	sleep: SleepRepository | null
+	feeding: FeedingRepository | null
 	settings: SettingsRepository | null
 	themePreference: ThemePreference
 	setThemePreferenceState: (preference: ThemePreference) => void
@@ -51,6 +53,7 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 				childrenRepo: null,
 				events: null,
 				sleep: null,
+				feeding: null,
 				settings: null,
 			}
 		}
@@ -58,6 +61,7 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 			childrenRepo: new ChildRepository(db),
 			events: new EventRepository(db),
 			sleep: new SleepRepository(db),
+			feeding: new FeedingRepository(db),
 			settings: new SettingsRepository(db),
 		}
 	}, [db])
@@ -98,6 +102,7 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 		childrenRepo: repos.childrenRepo,
 		events: repos.events,
 		sleep: repos.sleep,
+		feeding: repos.feeding,
 		settings: repos.settings,
 		themePreference,
 		setThemePreferenceState,
