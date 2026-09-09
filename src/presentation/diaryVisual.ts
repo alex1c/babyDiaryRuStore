@@ -36,6 +36,8 @@ export function diaryVisualForKind (kind: TimelineKind): DiaryVisual {
 			return { iconKey: 'note', accent: 'note' }
 		case 'custom':
 			return { iconKey: 'custom', accent: 'custom' }
+		case 'milestone':
+			return { iconKey: 'milestone', accent: 'custom' }
 	}
 }
 

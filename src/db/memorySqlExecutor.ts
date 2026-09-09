@@ -22,6 +22,10 @@ const TABLE_NAMES = [
 	'custom_event_definitions',
 	'event_custom',
 	'recent_foods',
+	'growth_measurements',
+	'teeth',
+	'moments',
+	'month_photos',
 	'app_settings',
 	'schema_migrations',
 ] as const
@@ -342,6 +346,95 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return { changes: 1, lastInsertRowId: 0 }
 		}
 
+		if (/^UPDATE event_milestone SET/i.test(normalized)) {
+			const eventId = params[params.length - 1]
+			const row = this.tables.event_milestone.find(
+				(r) => r.event_id === eventId,
+			)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			const [label, photoUri, milestoneType, linkedMomentId] = params
+			row.label = label as string
+			row.photo_uri = photoUri as string | null
+			row.milestone_type = milestoneType as string | null
+			row.linked_moment_id = linkedMomentId as string | null
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE growth_measurements SET/i.test(normalized)) {
+			const id = params[params.length - 1]
+			const row = this.tables.growth_measurements.find((r) => r.id === id)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			const [
+				measuredAt,
+				measuredLocalDate,
+				weightGrams,
+				heightMm,
+				headMm,
+				notes,
+				updatedAt,
+			] = params
+			row.measured_at = measuredAt as string
+			row.measured_local_date = measuredLocalDate as string
+			row.weight_grams = weightGrams as number | null
+			row.height_mm = heightMm as number | null
+			row.head_circumference_mm = headMm as number | null
+			row.notes = notes as string | null
+			row.updated_at = updatedAt as string
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE teeth SET erupted_at = \?, notes = \?, updated_at = \? WHERE id = \?$/i.test(normalized)) {
+			const [eruptedAt, notes, updatedAt, id] = params
+			const row = this.tables.teeth.find((r) => r.id === id)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			row.erupted_at = eruptedAt as string
+			row.notes = notes as string | null
+			row.updated_at = updatedAt as string
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE moments SET/i.test(normalized)) {
+			const id = params[params.length - 1]
+			const row = this.tables.moments.find((r) => r.id === id)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			const [
+				photoUri,
+				takenAt,
+				takenLocalDate,
+				title,
+				notes,
+				milestoneEventId,
+				updatedAt,
+			] = params
+			row.photo_uri = photoUri as string
+			row.taken_at = takenAt as string
+			row.taken_local_date = takenLocalDate as string
+			row.title = title as string | null
+			row.notes = notes as string | null
+			row.milestone_event_id = milestoneEventId as string | null
+			row.updated_at = updatedAt as string
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE month_photos SET moment_id = \?, updated_at = \? WHERE id = \?$/i.test(normalized)) {
+			const [momentId, updatedAt, id] = params
+			const row = this.tables.month_photos.find((r) => r.id === id)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			row.moment_id = momentId as string
+			row.updated_at = updatedAt as string
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
 		if (/^UPDATE custom_event_definitions SET/i.test(normalized)) {
 			const id = params[params.length - 1]
 			const row = this.tables.custom_event_definitions.find((r) => r.id === id)
@@ -495,6 +588,39 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return (rows[0] as T) ?? null
 		}
 
+		if (/INNER JOIN event_milestone/i.test(normalized)) {
+			const rows = this.queryMilestoneJoins(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
+		if (/FROM growth_measurements/i.test(normalized)) {
+			const rows = this.queryGrowth(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
+		if (/FROM teeth/i.test(normalized)) {
+			const rows = this.queryTeeth(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
+		if (/FROM moments/i.test(normalized)) {
+			const rows = this.queryMoments(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
+		if (/FROM month_photos/i.test(normalized)) {
+			const rows = this.queryMonthPhotos(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
+		if (/^SELECT event_id FROM event_milestone WHERE photo_uri = \?$/i.test(normalized)) {
+			return (
+				(this.tables.event_milestone.find(
+					(r) => r.photo_uri === params[0],
+				) as T) ?? null
+			)
+		}
+
 		if (/^SELECT id, child_id, name, icon_key, color_token, is_active, created_at, updated_at FROM custom_event_definitions WHERE id = \?$/i.test(normalized)) {
 			const row = this.tables.custom_event_definitions.find((r) => r.id === params[0])
 			return (row as T) ?? null
@@ -571,6 +697,32 @@ export class MemorySqlExecutor implements SqlExecutor {
 
 		if (/INNER JOIN event_custom/i.test(normalized)) {
 			return this.queryCustomJoins(normalized, params) as T[]
+		}
+
+		if (/INNER JOIN event_milestone/i.test(normalized)) {
+			return this.queryMilestoneJoins(normalized, params) as T[]
+		}
+
+		if (/FROM growth_measurements/i.test(normalized)) {
+			return this.queryGrowth(normalized, params) as T[]
+		}
+
+		if (/FROM teeth/i.test(normalized)) {
+			return this.queryTeeth(normalized, params) as T[]
+		}
+
+		if (/FROM moments/i.test(normalized)) {
+			return this.queryMoments(normalized, params) as T[]
+		}
+
+		if (/FROM month_photos/i.test(normalized)) {
+			return this.queryMonthPhotos(normalized, params) as T[]
+		}
+
+		if (/^SELECT event_id FROM event_milestone WHERE photo_uri = \?$/i.test(normalized)) {
+			return this.tables.event_milestone
+				.filter((r) => r.photo_uri === params[0])
+				.map((r) => ({ event_id: r.event_id })) as T[]
 		}
 
 		if (/FROM custom_event_definitions/i.test(normalized)) {
@@ -1237,7 +1389,9 @@ export class MemorySqlExecutor implements SqlExecutor {
 		if (!this.foreignKeysEnabled) {
 			return
 		}
-		if (table === 'events' || table === 'recent_foods' || table === 'custom_event_definitions') {
+		if (table === 'events' || table === 'recent_foods' || table === 'custom_event_definitions'
+			|| table === 'growth_measurements' || table === 'teeth' || table === 'moments'
+			|| table === 'month_photos') {
 			if (row.child_id != null) {
 				const child = this.tables.children.find((c) => c.id === row.child_id)
 				if (!child) {
@@ -1300,5 +1454,142 @@ export class MemorySqlExecutor implements SqlExecutor {
 		this.tables.recent_foods = this.tables.recent_foods.filter(
 			(row) => row.child_id !== childId,
 		)
+		this.tables.growth_measurements = this.tables.growth_measurements.filter(
+			(row) => row.child_id !== childId,
+		)
+		this.tables.teeth = this.tables.teeth.filter(
+			(row) => row.child_id !== childId,
+		)
+		this.tables.moments = this.tables.moments.filter(
+			(row) => row.child_id !== childId,
+		)
+		this.tables.month_photos = this.tables.month_photos.filter(
+			(row) => row.child_id !== childId,
+		)
+	}
+
+	private queryMilestoneJoins (sql: string, params: SqlParam[]): Row[] {
+		let rows: Row[] = this.tables.events
+			.filter((e) => e.type === 'milestone')
+			.map((e) => {
+				const m = this.tables.event_milestone.find(
+					(d) => d.event_id === e.id,
+				)
+				if (!m) {
+					return null
+				}
+				const row: Row = {
+					id: e.id as string,
+					child_id: e.child_id as string,
+					start_at: e.start_at as string,
+					start_local_date: e.start_local_date as string,
+					notes: (e.notes as string | null) ?? null,
+					created_at: e.created_at as string,
+					updated_at: e.updated_at as string,
+					label: m.label as string,
+					photo_uri: (m.photo_uri as string | null) ?? null,
+					milestone_type: (m.milestone_type as string | null) ?? null,
+					linked_moment_id:
+						(m.linked_moment_id as string | null) ?? null,
+				}
+				return row
+			})
+			.filter((r): r is Row => r != null)
+
+		if (/e\.id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.id === params[0])
+		} else if (/e\.child_id = \? AND e\.start_local_date = \?/i.test(sql)) {
+			rows = rows.filter(
+				(r) =>
+					r.child_id === params[0] &&
+					r.start_local_date === params[1],
+			)
+		} else if (/e\.child_id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.child_id === params[0])
+		}
+
+		rows.sort((a, b) =>
+			String(b.start_at).localeCompare(String(a.start_at)),
+		)
+		if (/LIMIT \?/i.test(sql)) {
+			const limit = params[params.length - 1]
+			if (typeof limit === 'number') {
+				rows = rows.slice(0, limit)
+			}
+		}
+		return rows
+	}
+
+	private queryGrowth (sql: string, params: SqlParam[]): Row[] {
+		let rows = [...this.tables.growth_measurements]
+		if (/WHERE id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.id === params[0])
+		} else if (/child_id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.child_id === params[0])
+		}
+		rows.sort((a, b) =>
+			String(b.measured_at).localeCompare(String(a.measured_at)),
+		)
+		if (/LIMIT \?/i.test(sql)) {
+			const limit = params[params.length - 1]
+			if (typeof limit === 'number') {
+				rows = rows.slice(0, limit)
+			}
+		}
+		return rows
+	}
+
+	private queryTeeth (sql: string, params: SqlParam[]): Row[] {
+		let rows = [...this.tables.teeth]
+		if (/WHERE id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.id === params[0])
+		} else if (/child_id = \? AND tooth_key = \?/i.test(sql)) {
+			rows = rows.filter(
+				(r) =>
+					r.child_id === params[0] && r.tooth_key === params[1],
+			)
+		} else if (/child_id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.child_id === params[0])
+		}
+		rows.sort((a, b) =>
+			String(b.erupted_at).localeCompare(String(a.erupted_at)),
+		)
+		return rows
+	}
+
+	private queryMoments (sql: string, params: SqlParam[]): Row[] {
+		let rows = [...this.tables.moments]
+		if (/WHERE id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.id === params[0])
+		} else if (/photo_uri = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.photo_uri === params[0])
+		} else if (/child_id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.child_id === params[0])
+		}
+		rows.sort((a, b) =>
+			String(b.taken_at).localeCompare(String(a.taken_at)),
+		)
+		if (/LIMIT \?/i.test(sql)) {
+			const limit = params[params.length - 1]
+			if (typeof limit === 'number') {
+				rows = rows.slice(0, limit)
+			}
+		}
+		return rows
+	}
+
+	private queryMonthPhotos (sql: string, params: SqlParam[]): Row[] {
+		let rows = [...this.tables.month_photos]
+		if (/WHERE id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.id === params[0])
+		} else if (/child_id = \? AND month_key = \?/i.test(sql)) {
+			rows = rows.filter(
+				(r) =>
+					r.child_id === params[0] && r.month_key === params[1],
+			)
+		} else if (/child_id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.child_id === params[0])
+		}
+		return rows
 	}
 }

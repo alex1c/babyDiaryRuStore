@@ -166,6 +166,34 @@ function RootNavigator () {
 					name="training"
 					options={{ title: 'Обучение', presentation: 'card' }}
 				/>
+				<Stack.Screen
+					name="development/measure"
+					options={{ title: 'Измерение', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="development/measurements"
+					options={{ title: 'История измерений', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="development/milestone/index"
+					options={{ title: 'Достижение', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="development/milestone/[id]"
+					options={{ title: 'Достижение', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="development/tooth"
+					options={{ title: 'Зуб', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="development/moment/index"
+					options={{ title: 'Момент', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="development/moment/[id]"
+					options={{ title: 'Момент', presentation: 'card' }}
+				/>
 			</Stack>
 		</>
 	)

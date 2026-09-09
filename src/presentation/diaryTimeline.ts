@@ -15,6 +15,7 @@ import {
 	breastSideLabel,
 	feedingTypeLabel,
 } from '../domain/feedingLabels'
+import type { MilestoneEvent } from '../models/development'
 import type { DiaperEvent } from '../models/diaper'
 import type { FeedingEvent } from '../models/feeding'
 import type { SleepEvent } from '../models/sleep'
@@ -46,6 +47,7 @@ export type TimelineKind =
 	| 'medicine'
 	| 'note'
 	| 'custom'
+	| 'milestone'
 
 export type DiaryFilter = 'all' | 'sleep' | 'feeding' | 'diaper' | 'other'
 
@@ -55,6 +57,7 @@ export type DiaryOtherFilter =
 	| 'temperature'
 	| 'medicine'
 	| 'custom'
+	| 'milestone'
 
 export interface TimelineRow {
 	id: string
@@ -391,6 +394,23 @@ export function customToTimeline (event: CustomEvent): TimelineRow {
 		href: `/event/${event.id}?kind=custom`,
 		filterGroup: 'other',
 		otherGroup: 'custom',
+	})
+}
+
+/** Milestones appear under Diary «Другое». */
+export function milestoneToTimeline (event: MilestoneEvent): TimelineRow {
+	return withVisual('milestone', {
+		id: event.id,
+		startAt: event.startAt,
+		groupLocalDate: event.startLocalDate,
+		timeLabel: formatLocalTime(event.startAt),
+		title: 'Достижение',
+		subtitle: event.title,
+		searchText: joinSearch('достижение', event.title, event.notes),
+		isActive: false,
+		href: `/development/milestone/${event.id}`,
+		filterGroup: 'other',
+		otherGroup: 'milestone',
 	})
 }
 

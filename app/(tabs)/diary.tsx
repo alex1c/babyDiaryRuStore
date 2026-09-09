@@ -66,13 +66,14 @@ const OTHER_FILTERS: { id: DiaryOtherFilter; label: string }[] = [
 	{ id: 'temperature', label: 'Температура' },
 	{ id: 'medicine', label: 'Лекарства' },
 	{ id: 'custom', label: 'Свои' },
+	{ id: 'milestone', label: 'Достижения' },
 ]
 
 export default function DiaryScreen () {
 	const { colors } = useAppTheme()
 	const router = useRouter()
 	const { activeChild, loading: childLoading } = useActiveChild()
-	const { sleep, feeding, diaper, quickEvents } = useDatabase()
+	const { sleep, feeding, diaper, quickEvents, milestones } = useDatabase()
 
 	const today = toLocalDateOnly()
 	const [selectedDate, setSelectedDate] = useState(today)
@@ -90,16 +91,26 @@ export default function DiaryScreen () {
 	const [summary, setSummary] = useState<DiaryDaySummary | null>(null)
 	const [loading, setLoading] = useState(true)
 
-	const reposReady = Boolean(sleep && feeding && diaper && quickEvents)
+	const reposReady = Boolean(
+		sleep && feeding && diaper && quickEvents && milestones,
+	)
 
 	const refresh = useCallback(async () => {
-		if (!reposReady || !activeChild || !sleep || !feeding || !diaper || !quickEvents) {
+		if (
+			!reposReady ||
+			!activeChild ||
+			!sleep ||
+			!feeding ||
+			!diaper ||
+			!quickEvents ||
+			!milestones
+		) {
 			setRows([])
 			setSummary(null)
 			setLoading(false)
 			return
 		}
-		const repos = { sleep, feeding, diaper, quickEvents }
+		const repos = { sleep, feeding, diaper, quickEvents, milestones }
 		const stamp = Date.now()
 		try {
 			if (viewMode === 'day') {
@@ -137,6 +148,7 @@ export default function DiaryScreen () {
 		feeding,
 		diaper,
 		quickEvents,
+		milestones,
 		viewMode,
 		selectedDate,
 	])

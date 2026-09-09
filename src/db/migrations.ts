@@ -226,6 +226,84 @@ CREATE INDEX IF NOT EXISTS idx_events_child_end_local
 	ON events(child_id, end_local_date);
 `,
 	},
+	{
+		version: 6,
+		name: 'growth_milestones_moments',
+		sql: `
+PRAGMA foreign_keys = ON;
+
+-- Growth visit: any combination of weight / height / head (nullable).
+CREATE TABLE growth_measurements (
+	id TEXT PRIMARY KEY NOT NULL,
+	child_id TEXT NOT NULL,
+	measured_at TEXT NOT NULL,
+	measured_local_date TEXT NOT NULL,
+	weight_grams INTEGER,
+	height_mm INTEGER,
+	head_circumference_mm INTEGER,
+	notes TEXT,
+	created_at TEXT NOT NULL,
+	updated_at TEXT NOT NULL,
+	FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_growth_child_date
+	ON growth_measurements(child_id, measured_local_date);
+CREATE INDEX idx_growth_child_measured_at
+	ON growth_measurements(child_id, measured_at);
+
+-- Milestone detail extras (events.type = 'milestone').
+ALTER TABLE event_milestone ADD COLUMN milestone_type TEXT;
+ALTER TABLE event_milestone ADD COLUMN linked_moment_id TEXT;
+
+-- Tooth eruption tracker.
+CREATE TABLE teeth (
+	id TEXT PRIMARY KEY NOT NULL,
+	child_id TEXT NOT NULL,
+	tooth_key TEXT NOT NULL,
+	erupted_at TEXT NOT NULL,
+	notes TEXT,
+	created_at TEXT NOT NULL,
+	updated_at TEXT NOT NULL,
+	FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE,
+	UNIQUE (child_id, tooth_key)
+);
+
+CREATE INDEX idx_teeth_child ON teeth(child_id, erupted_at);
+
+-- Photo moments — URI/path only, never BLOBs.
+CREATE TABLE moments (
+	id TEXT PRIMARY KEY NOT NULL,
+	child_id TEXT NOT NULL,
+	photo_uri TEXT NOT NULL,
+	taken_at TEXT NOT NULL,
+	taken_local_date TEXT NOT NULL,
+	title TEXT,
+	notes TEXT,
+	milestone_event_id TEXT,
+	created_at TEXT NOT NULL,
+	updated_at TEXT NOT NULL,
+	FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE,
+	FOREIGN KEY (milestone_event_id) REFERENCES events(id) ON DELETE SET NULL
+);
+
+CREATE INDEX idx_moments_child_taken
+	ON moments(child_id, taken_at);
+
+-- First-year / monthly featured photo selection.
+CREATE TABLE month_photos (
+	id TEXT PRIMARY KEY NOT NULL,
+	child_id TEXT NOT NULL,
+	month_key TEXT NOT NULL,
+	moment_id TEXT NOT NULL,
+	created_at TEXT NOT NULL,
+	updated_at TEXT NOT NULL,
+	FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE,
+	FOREIGN KEY (moment_id) REFERENCES moments(id) ON DELETE CASCADE,
+	UNIQUE (child_id, month_key)
+);
+`,
+	},
 ]
 
 export const LATEST_SCHEMA_VERSION =

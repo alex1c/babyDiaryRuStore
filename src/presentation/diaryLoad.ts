@@ -8,6 +8,7 @@ import { aggregateFeedingsForLocalDay } from '../domain/feedingAggregation'
 import { aggregateSleepForLocalDay } from '../domain/sleepAggregation'
 import type { DiaperRepository } from '../repositories/diaperRepository'
 import type { FeedingRepository } from '../repositories/feedingRepository'
+import type { MilestoneRepository } from '../repositories/milestoneRepository'
 import type { QuickEventRepository } from '../repositories/quickEventRepository'
 import type { SleepRepository } from '../repositories/sleepRepository'
 import {
@@ -20,6 +21,7 @@ import {
 	diaperToTimeline,
 	feedingToTimeline,
 	medicineToTimeline,
+	milestoneToTimeline,
 	noteToTimeline,
 	sleepToTimeline,
 	sleepToTimelineForDay,
@@ -34,6 +36,7 @@ export interface DiaryLoadRepos {
 	feeding: FeedingRepository
 	diaper: DiaperRepository
 	quickEvents: QuickEventRepository
+	milestones: MilestoneRepository
 }
 
 export interface DiaryDayBundle {
@@ -77,6 +80,10 @@ export async function loadDiaryDay (
 		childId,
 		localDate,
 	)
+	const milestones = await repos.milestones.listByChildAndLocalDate(
+		childId,
+		localDate,
+	)
 
 	const rows: TimelineRow[] = [
 		...sleeps.map((e) => sleepToTimelineForDay(e, localDate, nowMs)),
@@ -87,6 +94,7 @@ export async function loadDiaryDay (
 		...medicines.map((e) => medicineToTimeline(e)),
 		...notes.map((e) => noteToTimeline(e)),
 		...customs.map((e) => customToTimeline(e)),
+		...milestones.map((e) => milestoneToTimeline(e)),
 	]
 	rows.sort((a, b) => b.startAt.localeCompare(a.startAt))
 
@@ -123,6 +131,7 @@ export async function loadDiaryHistoryPage (
 		childId,
 		limit,
 	)
+	const milestones = await repos.milestones.listByChild(childId, limit)
 
 	const rows: TimelineRow[] = [
 		...sleeps.map((e) => sleepToTimeline(e, nowMs)),
@@ -133,6 +142,7 @@ export async function loadDiaryHistoryPage (
 		...medicines.map((e) => medicineToTimeline(e)),
 		...notes.map((e) => noteToTimeline(e)),
 		...customs.map((e) => customToTimeline(e)),
+		...milestones.map((e) => milestoneToTimeline(e)),
 	]
 	rows.sort((a, b) => b.startAt.localeCompare(a.startAt))
 	return rows.slice(0, limit)

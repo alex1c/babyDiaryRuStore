@@ -7,6 +7,7 @@ import { LATEST_SCHEMA_VERSION } from '../src/db/migrations'
 import { ChildRepository } from '../src/repositories/childRepository'
 import { DiaperRepository } from '../src/repositories/diaperRepository'
 import { FeedingRepository } from '../src/repositories/feedingRepository'
+import { MilestoneRepository } from '../src/repositories/milestoneRepository'
 import { QuickEventRepository } from '../src/repositories/quickEventRepository'
 import { SleepRepository } from '../src/repositories/sleepRepository'
 import {
@@ -31,13 +32,14 @@ async function setup () {
 	const feeding = new FeedingRepository(db)
 	const diaper = new DiaperRepository(db)
 	const quickEvents = new QuickEventRepository(db)
+	const milestones = new MilestoneRepository(db)
 	const child = await children.create({
 		name: 'Тест',
 		birthDate: '2026-06-01',
 	})
 	return {
 		db,
-		repos: { sleep, feeding, diaper, quickEvents },
+		repos: { sleep, feeding, diaper, quickEvents, milestones },
 		childId: child.id,
 	}
 }

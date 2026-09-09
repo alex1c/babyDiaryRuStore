@@ -21,9 +21,14 @@ import { ChildRepository } from '../repositories/childRepository'
 import { DiaperRepository } from '../repositories/diaperRepository'
 import { EventRepository } from '../repositories/eventRepository'
 import { FeedingRepository } from '../repositories/feedingRepository'
+import { GrowthRepository } from '../repositories/growthRepository'
+import { MilestoneRepository } from '../repositories/milestoneRepository'
+import { MomentRepository } from '../repositories/momentRepository'
 import { QuickEventRepository } from '../repositories/quickEventRepository'
 import { SettingsRepository } from '../repositories/settingsRepository'
 import { SleepRepository } from '../repositories/sleepRepository'
+import { ToothRepository } from '../repositories/toothRepository'
+import { getAppPhotoStorage } from '../services/appPhotoStorage'
 import { logger } from '../services/logger'
 import { lightColors, spacing, typography } from '../theme/tokens'
 
@@ -37,6 +42,10 @@ interface DatabaseContextValue {
 	feeding: FeedingRepository | null
 	diaper: DiaperRepository | null
 	quickEvents: QuickEventRepository | null
+	growth: GrowthRepository | null
+	milestones: MilestoneRepository | null
+	teeth: ToothRepository | null
+	moments: MomentRepository | null
 	settings: SettingsRepository | null
 	themePreference: ThemePreference
 	setThemePreferenceState: (preference: ThemePreference) => void
@@ -60,9 +69,14 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 				feeding: null,
 				diaper: null,
 				quickEvents: null,
+				growth: null,
+				milestones: null,
+				teeth: null,
+				moments: null,
 				settings: null,
 			}
 		}
+		const photos = getAppPhotoStorage()
 		return {
 			childrenRepo: new ChildRepository(db),
 			events: new EventRepository(db),
@@ -70,6 +84,10 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 			feeding: new FeedingRepository(db),
 			diaper: new DiaperRepository(db),
 			quickEvents: new QuickEventRepository(db),
+			growth: new GrowthRepository(db),
+			milestones: new MilestoneRepository(db),
+			teeth: new ToothRepository(db),
+			moments: new MomentRepository(db, photos),
 			settings: new SettingsRepository(db),
 		}
 	}, [db])
@@ -113,6 +131,10 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 		feeding: repos.feeding,
 		diaper: repos.diaper,
 		quickEvents: repos.quickEvents,
+		growth: repos.growth,
+		milestones: repos.milestones,
+		teeth: repos.teeth,
+		moments: repos.moments,
 		settings: repos.settings,
 		themePreference,
 		setThemePreferenceState,
