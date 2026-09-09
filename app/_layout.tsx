@@ -1,18 +1,23 @@
 /**
- * Root layout: error boundary, theme, database gate, navigation shell.
+ * Root layout: error boundary, theme, database, active child, onboarding gate.
  */
 
-import { Stack } from 'expo-router'
+import { Stack, useRouter, useSegments, type Href } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
-import { StyleSheet } from 'react-native'
+import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 
 import { AppErrorBoundary } from '@/src/components/AppErrorBoundary'
+import {
+	ActiveChildProvider,
+	useActiveChild,
+} from '@/src/context/ActiveChildContext'
 import { DatabaseProvider, useDatabase } from '@/src/context/DatabaseContext'
 import { AppThemeProvider, useAppTheme } from '@/src/theme/ThemeProvider'
+import { lightColors } from '@/src/theme/tokens'
 
 export { ErrorBoundary } from 'expo-router'
 
@@ -28,6 +33,40 @@ function ThemeSync ({ children }: { children: React.ReactNode }) {
 	useEffect(() => {
 		setPreference(themePreference)
 	}, [themePreference, setPreference])
+
+	return <>{children}</>
+}
+
+/**
+ * Redirect to onboarding when there are no children yet.
+ * Navigator stays mounted so replace() can resolve.
+ */
+function OnboardingGate ({ children }: { children: React.ReactNode }) {
+	const { loading, needsOnboarding } = useActiveChild()
+	const segments = useSegments()
+	const router = useRouter()
+	const { colors } = useAppTheme()
+
+	useEffect(() => {
+		if (loading) {
+			return
+		}
+		const first = String(segments[0] ?? '')
+		const onOnboarding = first === 'onboarding'
+		if (needsOnboarding && !onOnboarding) {
+			router.replace('/onboarding' as Href)
+		} else if (!needsOnboarding && onOnboarding) {
+			router.replace('/(tabs)' as Href)
+		}
+	}, [loading, needsOnboarding, segments, router])
+
+	if (loading) {
+		return (
+			<View style={[styles.center, { backgroundColor: colors.background }]}>
+				<ActivityIndicator size="large" color={colors.primary} />
+			</View>
+		)
+	}
 
 	return <>{children}</>
 }
@@ -52,6 +91,14 @@ function RootNavigator () {
 			>
 				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 				<Stack.Screen
+					name="onboarding"
+					options={{ headerShown: false, animation: 'fade' }}
+				/>
+				<Stack.Screen
+					name="profile"
+					options={{ title: 'Профиль малыша', presentation: 'card' }}
+				/>
+				<Stack.Screen
 					name="settings"
 					options={{ title: 'Настройки', presentation: 'card' }}
 				/>
@@ -72,7 +119,11 @@ export default function RootLayout () {
 					<AppThemeProvider>
 						<DatabaseProvider>
 							<ThemeSync>
-								<RootNavigator />
+								<ActiveChildProvider>
+									<OnboardingGate>
+										<RootNavigator />
+									</OnboardingGate>
+								</ActiveChildProvider>
 							</ThemeSync>
 						</DatabaseProvider>
 					</AppThemeProvider>
@@ -85,5 +136,11 @@ export default function RootLayout () {
 const styles = StyleSheet.create({
 	flex: {
 		flex: 1,
+	},
+	center: {
+		flex: 1,
+		alignItems: 'center',
+		justifyContent: 'center',
+		backgroundColor: lightColors.background,
 	},
 })

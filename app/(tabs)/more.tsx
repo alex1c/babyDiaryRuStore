@@ -1,16 +1,17 @@
 /**
- * More tab — entry point to settings, training, and future tools.
+ * More tab — entry to profile, settings, training.
  */
 
 import { Link } from 'expo-router'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useAppTheme } from '@/src/theme/ThemeProvider'
 import { radii, spacing, typography } from '@/src/theme/tokens'
 
 interface MoreLinkProps {
-	href: '/settings' | '/training'
+	href: '/settings' | '/training' | '/profile'
 	title: string
 	subtitle: string
 }
@@ -42,6 +43,7 @@ function MoreLink ({ href, title, subtitle }: MoreLinkProps) {
 
 export default function MoreScreen () {
 	const { colors } = useAppTheme()
+	const { activeChild } = useActiveChild()
 
 	return (
 		<SafeAreaView
@@ -50,9 +52,18 @@ export default function MoreScreen () {
 		>
 			<ScrollView contentContainerStyle={styles.content}>
 				<MoreLink
+					href="/profile"
+					title="Профиль малыша"
+					subtitle={
+						activeChild
+							? activeChild.name
+							: 'Имя, дата рождения и данные при рождении'
+					}
+				/>
+				<MoreLink
 					href="/settings"
 					title="Настройки"
-					subtitle="Профиль, тема, уведомления, backup и другое"
+					subtitle="Тема, уведомления, backup и другое"
 				/>
 				<MoreLink
 					href="/training"
@@ -74,6 +85,7 @@ const styles = StyleSheet.create({
 		borderRadius: radii.md,
 		padding: spacing.md,
 		marginBottom: spacing.sm,
+		minHeight: 64,
 	},
 	rowText: { flex: 1, paddingRight: spacing.sm },
 	rowTitle: { ...typography.subtitle, marginBottom: 2 },

@@ -1,7 +1,8 @@
 /**
- * Settings skeleton — sections only; behavior arrives in later phases.
+ * Settings — theme + links to profile and future sections.
  */
 
+import { Link } from 'expo-router'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 import { useDatabase } from '@/src/context/DatabaseContext'
@@ -9,20 +10,18 @@ import type { ThemePreference } from '@/src/models/types'
 import { useAppTheme } from '@/src/theme/ThemeProvider'
 import { radii, spacing, typography } from '@/src/theme/tokens'
 
-const SECTIONS = [
-	{ title: 'Профиль малыша', hint: 'Имя, дата рождения, фото (URI)' },
-	{ title: 'Уведомления', hint: 'Напоминания — позже' },
-	{ title: 'Резервная копия', hint: 'Экспорт SQLite + файлов — позже' },
-	{ title: 'Обучение', hint: 'Доступно из раздела «Ещё»' },
-	{ title: 'Конфиденциальность', hint: 'Политика и локальное хранение' },
-	{ title: 'О приложении', hint: 'Версия и контакты' },
-] as const
-
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 	{ value: 'system', label: 'Системная' },
 	{ value: 'light', label: 'Светлая' },
 	{ value: 'dark', label: 'Тёмная' },
 ]
+
+const PLACEHOLDER_SECTIONS = [
+	{ title: 'Уведомления', hint: 'Напоминания — позже' },
+	{ title: 'Резервная копия', hint: 'Экспорт данных — позже' },
+	{ title: 'Конфиденциальность', hint: 'Локальное хранение на устройстве' },
+	{ title: 'О приложении', hint: 'Дневник малыша · Phase 1' },
+] as const
 
 export default function SettingsScreen () {
 	const { colors, preference, setPreference } = useAppTheme()
@@ -73,7 +72,25 @@ export default function SettingsScreen () {
 				})}
 			</View>
 
-			{SECTIONS.map((section) => (
+			<Link href="/profile" asChild>
+				<Pressable
+					style={[
+						styles.card,
+						{ backgroundColor: colors.surface, borderColor: colors.border },
+					]}
+					accessibilityRole="button"
+					accessibilityLabel="Профиль малыша"
+				>
+					<Text style={[styles.cardTitle, { color: colors.text }]}>
+						Профиль малыша
+					</Text>
+					<Text style={[styles.cardHint, { color: colors.textSecondary }]}>
+						Имя, дата рождения, вес и рост
+					</Text>
+				</Pressable>
+			</Link>
+
+			{PLACEHOLDER_SECTIONS.map((section) => (
 				<View
 					key={section.title}
 					style={[
@@ -111,16 +128,20 @@ const styles = StyleSheet.create({
 		marginBottom: spacing.lg,
 	},
 	themeChip: {
+		minHeight: 44,
 		borderWidth: StyleSheet.hairlineWidth,
 		borderRadius: radii.sm,
 		paddingHorizontal: spacing.md,
 		paddingVertical: spacing.sm,
+		justifyContent: 'center',
 	},
 	card: {
 		borderWidth: StyleSheet.hairlineWidth,
 		borderRadius: radii.md,
 		padding: spacing.md,
 		marginBottom: spacing.sm,
+		minHeight: 64,
+		justifyContent: 'center',
 	},
 	cardTitle: {
 		...typography.subtitle,

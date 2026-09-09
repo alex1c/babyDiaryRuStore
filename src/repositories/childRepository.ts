@@ -10,6 +10,7 @@ import type {
 	CreateChildInput,
 	UpdateChildInput,
 } from '../models/types'
+import { isBirthDateAllowed } from '../domain/childValidation'
 import { isValidDateOnly, nowUtcInstant } from '../utils/datetime'
 import type { SqlExecutor } from '../db/types'
 
@@ -47,14 +48,21 @@ function normalizeName (name: string): string {
 	return name.trim()
 }
 
+function assertBirthDate (birthDate: string): void {
+	if (!isValidDateOnly(birthDate)) {
+		throw new Error(`Invalid birthDate: ${birthDate}`)
+	}
+	if (!isBirthDateAllowed(birthDate)) {
+		throw new Error('Birth date cannot be in the future')
+	}
+}
+
 function assertCreateInput (input: CreateChildInput): void {
 	const name = normalizeName(input.name)
 	if (!name) {
 		throw new Error('Child name is required')
 	}
-	if (!isValidDateOnly(input.birthDate)) {
-		throw new Error(`Invalid birthDate: ${input.birthDate}`)
-	}
+	assertBirthDate(input.birthDate)
 }
 
 export class ChildRepository {
@@ -158,9 +166,7 @@ export class ChildRepository {
 		if (!next.name) {
 			throw new Error('Child name is required')
 		}
-		if (!isValidDateOnly(next.birthDate)) {
-			throw new Error(`Invalid birthDate: ${next.birthDate}`)
-		}
+		assertBirthDate(next.birthDate)
 
 		await this.db.runAsync(
 			`UPDATE children SET
