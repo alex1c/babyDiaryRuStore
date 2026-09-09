@@ -184,6 +184,51 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return { changes: 1, lastInsertRowId: 0 }
 		}
 
+		if (/^UPDATE events SET end_at = \?, end_local_date = \?, updated_at = \? WHERE id = \?$/i.test(normalized)) {
+			const [endAt, endLocalDate, updatedAt, id] = params
+			const event = this.tables.events.find((r) => r.id === id)
+			if (!event) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			event.end_at = endAt as string
+			event.end_local_date = endLocalDate as string | null
+			event.updated_at = updatedAt as string
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE event_sleep SET sleep_type = \? WHERE event_id = \?$/i.test(normalized)) {
+			const [sleepType, eventId] = params
+			const row = this.tables.event_sleep.find((r) => r.event_id === eventId)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			row.sleep_type = sleepType as string
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE events SET start_at = \?, end_at = \?, start_local_date = \?, end_local_date = \?, notes = \?, updated_at = \? WHERE id = \?$/i.test(normalized)) {
+			const [
+				startAt,
+				endAt,
+				startLocalDate,
+				endLocalDate,
+				notes,
+				updatedAt,
+				id,
+			] = params
+			const event = this.tables.events.find((r) => r.id === id)
+			if (!event) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			event.start_at = startAt as string
+			event.end_at = endAt as string | null
+			event.start_local_date = startLocalDate as string
+			event.end_local_date = endLocalDate as string | null
+			event.notes = notes as string | null
+			event.updated_at = updatedAt as string
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
 		if (/^UPDATE events SET/i.test(normalized)) {
 			const id = params[params.length - 1]
 			const event = this.tables.events.find((r) => r.id === id)
@@ -265,6 +310,11 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return { user_version: this.userVersion } as T
 		}
 
+		if (/INNER JOIN event_sleep/i.test(normalized)) {
+			const rows = this.querySleepJoins(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
 		const byId = normalized.match(/^SELECT \* FROM (\w+) WHERE id = \?$/i)
 		if (byId) {
 			const table = byId[1]
@@ -288,6 +338,10 @@ export class MemorySqlExecutor implements SqlExecutor {
 		...params: SqlParam[]
 	): Promise<T[]> {
 		const normalized = sql.replace(/\s+/g, ' ').trim()
+
+		if (/INNER JOIN event_sleep/i.test(normalized)) {
+			return this.querySleepJoins(normalized, params) as T[]
+		}
 
 		if (/^SELECT \* FROM children ORDER BY/i.test(normalized)) {
 			return [...this.tables.children].sort((a, b) => {
@@ -338,6 +392,98 @@ export class MemorySqlExecutor implements SqlExecutor {
 		}
 
 		return []
+	}
+
+	private joinSleepRow (event: Row): Row | null {
+		const detail = this.tables.event_sleep.find(
+			(s) => s.event_id === event.id,
+		)
+		if (!detail) {
+			return null
+		}
+		return {
+			id: event.id ?? null,
+			child_id: event.child_id ?? null,
+			start_at: event.start_at ?? null,
+			end_at: event.end_at ?? null,
+			start_local_date: event.start_local_date ?? null,
+			end_local_date: event.end_local_date ?? null,
+			notes: event.notes ?? null,
+			created_at: event.created_at ?? null,
+			updated_at: event.updated_at ?? null,
+			sleep_type: detail.sleep_type ?? 'auto',
+			quality: detail.quality ?? null,
+		}
+	}
+
+	private querySleepJoins (
+		sql: string,
+		params: SqlParam[],
+	): Row[] {
+		let rows = this.tables.events
+			.filter((e) => e.type === 'sleep')
+			.map((e) => this.joinSleepRow(e))
+			.filter((r): r is Row => r != null)
+
+		if (/AND e\.id = \?/i.test(sql)) {
+			const id = params[0]
+			rows = rows.filter((r) => r.id === id)
+			return rows
+		}
+
+		if (/AND e\.child_id = \? AND e\.end_at IS NULL/i.test(sql)) {
+			const childId = params[0]
+			rows = rows
+				.filter((r) => r.child_id === childId && r.end_at == null)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+			return rows.slice(0, 1)
+		}
+
+		if (/AND e\.child_id = \? AND e\.end_at IS NOT NULL/i.test(sql)) {
+			const childId = params[0]
+			rows = rows
+				.filter((r) => r.child_id === childId && r.end_at != null)
+				.sort((a, b) =>
+					String(b.end_at).localeCompare(String(a.end_at)),
+				)
+			return rows.slice(0, 1)
+		}
+
+		if (
+			/AND e\.child_id = \? AND e\.start_local_date <= \? AND \(e\.end_local_date IS NULL OR e\.end_local_date >= \?\)/i.test(
+				sql,
+			)
+		) {
+			const [childId, localDate] = params
+			rows = rows
+				.filter(
+					(r) =>
+						r.child_id === childId &&
+						String(r.start_local_date) <= String(localDate) &&
+						(r.end_local_date == null ||
+							String(r.end_local_date) >= String(localDate)),
+				)
+				.sort((a, b) =>
+					String(a.start_at).localeCompare(String(b.start_at)),
+				)
+			return rows
+		}
+
+		if (/AND e\.child_id = \?/i.test(sql)) {
+			const childId = params[0]
+			const limit =
+				typeof params[1] === 'number' ? params[1] : rows.length
+			rows = rows
+				.filter((r) => r.child_id === childId)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+			return rows.slice(0, limit)
+		}
+
+		return rows
 	}
 
 	/** Apply initial migration metadata for tests that skip exec DDL. */

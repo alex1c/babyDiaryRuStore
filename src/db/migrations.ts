@@ -152,6 +152,16 @@ BEGIN
 END;
 `,
 	},
+	{
+		version: 2,
+		name: 'sleep_type_on_event_sleep',
+		sql: `
+PRAGMA foreign_keys = ON;
+
+-- day | night | auto — user can override; auto is a simple heuristic only.
+ALTER TABLE event_sleep ADD COLUMN sleep_type TEXT NOT NULL DEFAULT 'auto';
+`,
+	},
 ]
 
 export const LATEST_SCHEMA_VERSION =

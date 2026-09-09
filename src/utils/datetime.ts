@@ -150,10 +150,8 @@ export function formatDurationMs (ms: number): string {
 	if (hours <= 0) {
 		return `${minutes} мин`
 	}
-	if (minutes === 0) {
-		return `${hours} ч`
-	}
-	return `${hours} ч ${minutes} мин`
+	const mm = minutes.toString().padStart(2, '0')
+	return `${hours} ч ${mm} мин`
 }
 
 /** Format offset datetime for local display HH:MM without UTC conversion. */

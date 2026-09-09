@@ -12,9 +12,9 @@ import { LATEST_SCHEMA_VERSION, MIGRATIONS } from '../src/db/migrations'
 describe('migrations', () => {
 	it('exposes a monotonic schema version sequence', () => {
 		expect(MIGRATIONS.length).toBeGreaterThan(0)
-		expect(LATEST_SCHEMA_VERSION).toBe(1)
-		expect(getExpectedSchemaVersion()).toBe(1)
-		expect(MIGRATIONS.map((m) => m.version)).toEqual([1])
+		expect(LATEST_SCHEMA_VERSION).toBe(2)
+		expect(getExpectedSchemaVersion()).toBe(2)
+		expect(MIGRATIONS.map((m) => m.version)).toEqual([1, 2])
 
 		const v1 = MIGRATIONS[0]?.sql ?? ''
 		expect(v1).toContain('CREATE TABLE children')
@@ -25,6 +25,9 @@ describe('migrations', () => {
 		expect(v1).toContain('CREATE TABLE custom_event_definitions')
 		expect(v1).toContain('CREATE TABLE app_settings')
 		expect(v1).toContain('photo_uri')
+
+		const v2 = MIGRATIONS[1]?.sql ?? ''
+		expect(v2).toContain('sleep_type')
 	})
 
 	it('is a no-op when already at latest version', async () => {
@@ -42,11 +45,14 @@ describe('migrations', () => {
 		const result = await migrateDatabase(db)
 		expect(result.fromVersion).toBe(0)
 		expect(result.toVersion).toBe(LATEST_SCHEMA_VERSION)
-		expect(result.applied).toEqual(['1:initial_schema'])
-		expect(db.getTable('schema_migrations')).toHaveLength(1)
+		expect(result.applied).toEqual([
+			'1:initial_schema',
+			'2:sleep_type_on_event_sleep',
+		])
+		expect(db.getTable('schema_migrations')).toHaveLength(2)
 	})
 
-	it('preserves children data when re-running after markMigrated', async () => {
+	it('upgrades from v1 preserving children data', async () => {
 		const db = new MemorySqlExecutor()
 		db.markMigrated(1)
 		const now = new Date().toISOString()
@@ -65,7 +71,9 @@ describe('migrations', () => {
 		)
 
 		const result = await migrateDatabase(db)
-		expect(result.applied).toEqual([])
+		expect(result.fromVersion).toBe(1)
+		expect(result.toVersion).toBe(2)
+		expect(result.applied).toEqual(['2:sleep_type_on_event_sleep'])
 		expect(db.getTable('children')).toHaveLength(1)
 		expect(db.getTable('children')[0]?.name).toBe('Mila')
 	})

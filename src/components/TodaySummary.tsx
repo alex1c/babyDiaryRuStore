@@ -4,15 +4,24 @@
 
 import { StyleSheet, Text, View } from 'react-native'
 
-import type { TodayDaySummaryRow } from '../presentation/todayViewModel'
 import { useAppTheme } from '../theme/ThemeProvider'
 import { radii, spacing, typography } from '../theme/tokens'
 
-interface TodaySummaryProps {
-	rows: TodayDaySummaryRow[]
+export interface SummaryRow {
+	id: string
+	label: string
+	value: string
 }
 
-export function TodaySummary ({ rows }: TodaySummaryProps) {
+interface TodaySummaryProps {
+	rows: SummaryRow[]
+	title?: string
+}
+
+export function TodaySummary ({
+	rows,
+	title = 'Сегодня',
+}: TodaySummaryProps) {
 	const { colors } = useAppTheme()
 
 	return (
@@ -22,9 +31,9 @@ export function TodaySummary ({ rows }: TodaySummaryProps) {
 				{ backgroundColor: colors.surface, borderColor: colors.border },
 			]}
 			accessibilityRole="summary"
-			accessibilityLabel="Сводка за сегодня"
+			accessibilityLabel={`Сводка: ${title}`}
 		>
-			<Text style={[styles.title, { color: colors.text }]}>Сегодня</Text>
+			<Text style={[styles.title, { color: colors.text }]}>{title}</Text>
 			{rows.map((row) => (
 				<View key={row.id} style={styles.row}>
 					<Text style={[styles.label, { color: colors.textSecondary }]}>
