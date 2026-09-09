@@ -143,8 +143,8 @@ export class SleepRepository {
 		const id = await createEntityId()
 		const audit = nowUtcInstant()
 
-		await this.db.withTransactionAsync(async () => {
-			await this.db.runAsync(
+		await this.db.withTransactionAsync(async (transactionDb) => {
+			await transactionDb.runAsync(
 				`INSERT INTO events (
 					id, child_id, type, start_at, end_at,
 					start_local_date, end_local_date, title, notes,
@@ -158,7 +158,7 @@ export class SleepRepository {
 				audit,
 				audit,
 			)
-			await this.db.runAsync(
+			await transactionDb.runAsync(
 				`INSERT INTO event_sleep (event_id, quality, sleep_type)
 				 VALUES (?, NULL, ?)`,
 				id,
@@ -228,8 +228,8 @@ export class SleepRepository {
 		const startLocalDate = localDateFromOffsetDateTime(input.startAt)
 		const endLocalDate = localDateFromOffsetDateTime(input.endAt)
 
-		await this.db.withTransactionAsync(async () => {
-			await this.db.runAsync(
+		await this.db.withTransactionAsync(async (transactionDb) => {
+			await transactionDb.runAsync(
 				`INSERT INTO events (
 					id, child_id, type, start_at, end_at,
 					start_local_date, end_local_date, title, notes,
@@ -245,7 +245,7 @@ export class SleepRepository {
 				audit,
 				audit,
 			)
-			await this.db.runAsync(
+			await transactionDb.runAsync(
 				`INSERT INTO event_sleep (event_id, quality, sleep_type)
 				 VALUES (?, NULL, ?)`,
 				id,
@@ -290,8 +290,8 @@ export class SleepRepository {
 		const endLocalDate =
 			nextEnd != null ? localDateFromOffsetDateTime(nextEnd) : null
 
-		await this.db.withTransactionAsync(async () => {
-			await this.db.runAsync(
+		await this.db.withTransactionAsync(async (transactionDb) => {
+			await transactionDb.runAsync(
 				`UPDATE events SET
 					start_at = ?, end_at = ?, start_local_date = ?, end_local_date = ?,
 					notes = ?, updated_at = ?
@@ -304,7 +304,7 @@ export class SleepRepository {
 				audit,
 				eventId,
 			)
-			await this.db.runAsync(
+			await transactionDb.runAsync(
 				`UPDATE event_sleep SET sleep_type = ? WHERE event_id = ?`,
 				nextType,
 				eventId,

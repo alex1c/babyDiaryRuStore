@@ -55,13 +55,13 @@ export async function migrateDatabase (
 
 		try {
 			// One transaction per migration so a failure rolls back cleanly.
-			await db.withTransactionAsync(async () => {
-				await db.execAsync(migration.sql)
-				await db.execAsync(`PRAGMA user_version = ${migration.version}`)
+			await db.withTransactionAsync(async (transactionDb) => {
+				await transactionDb.execAsync(migration.sql)
+				await transactionDb.execAsync(`PRAGMA user_version = ${migration.version}`)
 
 				// schema_migrations exists after v1; record audit when available.
 				if (migration.version >= 1) {
-					await db.runAsync(
+					await transactionDb.runAsync(
 						`INSERT OR IGNORE INTO schema_migrations (version, name, applied_at)
 						 VALUES (?, ?, ?)`,
 						migration.version,

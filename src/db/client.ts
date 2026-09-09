@@ -29,7 +29,7 @@ export async function getDatabase (): Promise<SqlExecutor> {
 				getAllAsync: <T>(sql: string, ...params: (string | number | null)[]) =>
 					raw.getAllAsync<T>(sql, ...params),
 				execAsync: (sql) => raw.execAsync(sql),
-				withTransactionAsync: (task) => raw.withTransactionAsync(task),
+				withTransactionAsync: (task) => raw.withTransactionAsync(() => task(adapter)),
 			}
 
 			const serialized = createSerializedExecutor(adapter, sharedQueue)

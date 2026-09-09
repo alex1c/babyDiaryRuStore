@@ -36,6 +36,9 @@ export function createSerializedExecutor (
 	inner: import('./types').SqlExecutor,
 	queue: SqliteWriteQueue = new SqliteWriteQueue(),
 ): import('./types').SqlExecutor {
+	// The transaction callback must use this direct executor. Re-enqueueing
+	// operations while the outer transaction task owns the FIFO queue deadlocks.
+	const transactionExecutor: import('./types').SqlExecutor = inner
 	return {
 		runAsync: (sql, ...params) =>
 			queue.run(() => inner.runAsync(sql, ...params)),
@@ -45,6 +48,6 @@ export function createSerializedExecutor (
 			queue.run(() => inner.getAllAsync<T>(sql, ...params)),
 		execAsync: (sql) => queue.run(() => inner.execAsync(sql)),
 		withTransactionAsync: (task) =>
-			queue.run(() => inner.withTransactionAsync(task)),
+			queue.run(() => inner.withTransactionAsync(() => task(transactionExecutor))),
 	}
 }

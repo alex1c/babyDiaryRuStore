@@ -85,14 +85,14 @@ export class MemorySqlExecutor implements SqlExecutor {
 		// Ignore DDL in memory mode; tables are pre-created as arrays.
 	}
 
-	async withTransactionAsync (task: () => Promise<void>): Promise<void> {
+	async withTransactionAsync (task: (transactionDb: SqlExecutor) => Promise<void>): Promise<void> {
 		const snapshot = JSON.parse(JSON.stringify(this.tables)) as Record<
 			TableName,
 			Row[]
 		>
 		const versionSnapshot = this.userVersion
 		try {
-			await task()
+			await task(this)
 		} catch (error) {
 			this.tables = snapshot
 			this.userVersion = versionSnapshot

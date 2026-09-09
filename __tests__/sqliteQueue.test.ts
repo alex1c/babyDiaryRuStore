@@ -42,9 +42,9 @@ class CountingExecutor implements SqlExecutor {
 		return this.bump(async () => undefined)
 	}
 
-	withTransactionAsync (task: () => Promise<void>) {
+	withTransactionAsync (task: (transactionDb: SqlExecutor) => Promise<void>) {
 		return this.bump(async () => {
-			await task()
+			await task(this)
 		})
 	}
 }
@@ -101,5 +101,18 @@ describe('createSerializedExecutor', () => {
 
 		expect(inner.calls).toBe(3)
 		expect(inner.maxActive).toBe(1)
+	})
+
+	it('allows transaction callbacks to use the transaction executor', async () => {
+		const inner = new CountingExecutor()
+		const db = createSerializedExecutor(inner)
+
+		await db.withTransactionAsync(async (transactionDb) => {
+			await transactionDb.runAsync('INSERT')
+			await transactionDb.getFirstAsync('SELECT 1')
+		})
+
+		expect(inner.calls).toBe(3)
+		expect(inner.maxActive).toBe(2)
 	})
 })

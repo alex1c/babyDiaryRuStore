@@ -15,5 +15,5 @@ export interface SqlExecutor {
 	getFirstAsync<T> (sql: string, ...params: SqlParam[]): Promise<T | null>
 	getAllAsync<T> (sql: string, ...params: SqlParam[]): Promise<T[]>
 	execAsync (sql: string): Promise<void>
-	withTransactionAsync (task: () => Promise<void>): Promise<void>
+	withTransactionAsync (task: (transactionDb: SqlExecutor) => Promise<void>): Promise<void>
 }
