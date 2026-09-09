@@ -31,10 +31,13 @@ export const EVENT_TYPES = [
 	'diaper',
 	'temperature',
 	'medicine',
+	'vitamin',
 	'walk',
 	'bath',
 	'tummy_time',
 	'massage',
+	'doctor',
+	'note',
 	'custom',
 	'milestone',
 ] as const

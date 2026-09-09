@@ -191,6 +191,26 @@ CREATE TABLE recent_foods (
 CREATE INDEX idx_recent_foods_child ON recent_foods(child_id, last_used_at);
 `,
 	},
+	{
+		version: 4,
+		name: 'diaper_details_and_quick_events',
+		sql: `
+PRAGMA foreign_keys = ON;
+
+-- Optional observation fields for diaper (not medical diagnosis).
+ALTER TABLE event_diaper ADD COLUMN color TEXT;
+ALTER TABLE event_diaper ADD COLUMN consistency TEXT;
+
+-- vitamin | medicine — same detail table, separate events.type values.
+ALTER TABLE event_medicine ADD COLUMN kind TEXT NOT NULL DEFAULT 'medicine';
+
+-- Per-child custom event types (nullable keeps legacy/global rows readable).
+ALTER TABLE custom_event_definitions ADD COLUMN child_id TEXT;
+
+CREATE INDEX idx_custom_defs_child_active
+	ON custom_event_definitions(child_id, is_active);
+`,
+	},
 ]
 
 export const LATEST_SCHEMA_VERSION =

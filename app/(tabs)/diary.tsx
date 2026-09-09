@@ -1,5 +1,5 @@
 /**
- * Diary timeline — sleep + feedings with All | Sleep | Feeding filter.
+ * Diary timeline — sleep, feeding, diaper, and other everyday events.
  */
 
 import { useCallback, useState } from 'react'
@@ -17,58 +17,42 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { BannerAdSlot } from '@/src/components/BannerAdSlot'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
-import { sleepTypeLabel } from '@/src/domain/sleepType'
-import type { FeedingEvent } from '@/src/models/feeding'
-import type { SleepEvent } from '@/src/models/sleep'
-import { formatFeedingDetail } from '@/src/presentation/feedingFormat'
+import {
+	activityToTimeline,
+	customToTimeline,
+	diaperToTimeline,
+	feedingToTimeline,
+	medicineToTimeline,
+	noteToTimeline,
+	sleepToTimeline,
+	temperatureToTimeline,
+	type DiaryFilter,
+	type TimelineRow,
+} from '@/src/presentation/diaryTimeline'
 import { logger } from '@/src/services/logger'
 import { useAppTheme } from '@/src/theme/ThemeProvider'
-import {
-	durationBetweenMs,
-	formatDurationMs,
-} from '@/src/utils/durationFormat'
-import { formatLocalTime } from '@/src/utils/datetime'
 import { radii, spacing, typography } from '@/src/theme/tokens'
-
-type DiaryFilter = 'all' | 'sleep' | 'feeding'
-
-type DiaryRow =
-	| { kind: 'sleep'; event: SleepEvent }
-	| { kind: 'feeding'; event: FeedingEvent }
-
-function formatSleepRow (sleep: SleepEvent, nowMs: number): string {
-	const start = formatLocalTime(sleep.startAt)
-	const end =
-		sleep.endAt == null ? 'сейчас' : formatLocalTime(sleep.endAt)
-	const dur = formatDurationMs(
-		durationBetweenMs(sleep.startAt, sleep.endAt, nowMs),
-	)
-	const kind = sleepTypeLabel(sleep.sleepType)
-	return `${start}–${end}  Сон · ${dur} · ${kind}`
-}
-
-function formatFeedingRow (event: FeedingEvent, nowMs: number): string {
-	return `${formatLocalTime(event.startAt)} ${formatFeedingDetail(event, nowMs)}`
-}
 
 const FILTERS: { id: DiaryFilter; label: string }[] = [
 	{ id: 'all', label: 'Все' },
 	{ id: 'sleep', label: 'Сон' },
 	{ id: 'feeding', label: 'Кормление' },
+	{ id: 'diaper', label: 'Подгузники' },
+	{ id: 'other', label: 'Другое' },
 ]
 
 export default function DiaryScreen () {
 	const { colors } = useAppTheme()
 	const router = useRouter()
 	const { activeChild, loading: childLoading } = useActiveChild()
-	const { sleep, feeding } = useDatabase()
-	const [rows, setRows] = useState<DiaryRow[]>([])
+	const { sleep, feeding, diaper, quickEvents } = useDatabase()
+	const [rows, setRows] = useState<TimelineRow[]>([])
 	const [filter, setFilter] = useState<DiaryFilter>('all')
 	const [loading, setLoading] = useState(true)
 	const [nowMs] = useState(() => Date.now())
 
 	const refresh = useCallback(async () => {
-		if (!sleep || !feeding || !activeChild) {
+		if (!sleep || !feeding || !diaper || !quickEvents || !activeChild) {
 			setRows([])
 			setLoading(false)
 			return
@@ -77,23 +61,43 @@ export default function DiaryScreen () {
 			// Sequential SQLite — never Promise.all on one NativeDatabase.
 			const sleeps = await sleep.listByChild(activeChild.id, 100)
 			const feedings = await feeding.listByChild(activeChild.id, 100)
-			const merged: DiaryRow[] = [
-				...sleeps.map((event) => ({ kind: 'sleep' as const, event })),
-				...feedings.map((event) => ({
-					kind: 'feeding' as const,
-					event,
-				})),
-			]
-			merged.sort((a, b) =>
-				b.event.startAt.localeCompare(a.event.startAt),
+			const diapers = await diaper.listByChild(activeChild.id, 100)
+			const activities = await quickEvents.listActivitiesByChild(
+				activeChild.id,
+				100,
 			)
+			const temps = await quickEvents.listTemperaturesByChild(
+				activeChild.id,
+				50,
+			)
+			const medicines = await quickEvents.listMedicinesByChild(
+				activeChild.id,
+				50,
+			)
+			const notes = await quickEvents.listNotesByChild(activeChild.id, 50)
+			const customs = await quickEvents.listCustomEventsByChild(
+				activeChild.id,
+				50,
+			)
+
+			const merged: TimelineRow[] = [
+				...sleeps.map((e) => sleepToTimeline(e, nowMs)),
+				...feedings.map((e) => feedingToTimeline(e, nowMs)),
+				...diapers.map((e) => diaperToTimeline(e)),
+				...activities.map((e) => activityToTimeline(e)),
+				...temps.map((e) => temperatureToTimeline(e)),
+				...medicines.map((e) => medicineToTimeline(e)),
+				...notes.map((e) => noteToTimeline(e)),
+				...customs.map((e) => customToTimeline(e)),
+			]
+			merged.sort((a, b) => b.startAt.localeCompare(a.startAt))
 			setRows(merged)
 		} catch (error) {
 			logger.error('Failed to load diary', error)
 		} finally {
 			setLoading(false)
 		}
-	}, [sleep, feeding, activeChild])
+	}, [sleep, feeding, diaper, quickEvents, activeChild, nowMs])
 
 	useFocusEffect(
 		useCallback(() => {
@@ -106,7 +110,7 @@ export default function DiaryScreen () {
 		if (filter === 'all') {
 			return true
 		}
-		return row.kind === filter
+		return row.filterGroup === filter
 	})
 
 	if (childLoading || loading) {
@@ -124,12 +128,12 @@ export default function DiaryScreen () {
 		>
 			<FlatList
 				data={visible}
-				keyExtractor={(item) => `${item.kind}-${item.event.id}`}
+				keyExtractor={(item) => `${item.kind}-${item.id}`}
 				contentContainerStyle={styles.content}
 				ListHeaderComponent={
 					<View style={styles.header}>
 						<Text style={[styles.lead, { color: colors.textSecondary }]}>
-							Сон и кормления. Нажмите запись, чтобы исправить.
+							Все события дня. Нажмите запись, чтобы исправить.
 						</Text>
 						<View style={styles.filters}>
 							{FILTERS.map((item) => {
@@ -155,6 +159,7 @@ export default function DiaryScreen () {
 											style={{
 												color: on ? '#FFFFFF' : colors.primary,
 												fontWeight: '700',
+												fontSize: 13,
 											}}
 										>
 											{item.label}
@@ -173,8 +178,6 @@ export default function DiaryScreen () {
 										borderColor: colors.border,
 									},
 								]}
-								accessibilityRole="button"
-								accessibilityLabel="Добавить сон"
 							>
 								<Text style={{ color: colors.primary, fontWeight: '700' }}>
 									Сон
@@ -189,11 +192,23 @@ export default function DiaryScreen () {
 										borderColor: colors.border,
 									},
 								]}
-								accessibilityRole="button"
-								accessibilityLabel="Добавить кормление"
 							>
 								<Text style={{ color: colors.primary, fontWeight: '700' }}>
 									Кормление
+								</Text>
+							</Pressable>
+							<Pressable
+								onPress={() => router.push('/diaper' as Href)}
+								style={[
+									styles.addBtn,
+									{
+										backgroundColor: colors.primarySoft,
+										borderColor: colors.border,
+									},
+								]}
+							>
+								<Text style={{ color: colors.primary, fontWeight: '700' }}>
+									Подгузник
 								</Text>
 							</Pressable>
 						</View>
@@ -204,45 +219,29 @@ export default function DiaryScreen () {
 						Здесь появятся записи дневника
 					</Text>
 				}
-				renderItem={({ item }) => {
-					const label =
-						item.kind === 'sleep'
-							? formatSleepRow(item.event, nowMs)
-							: formatFeedingRow(item.event, nowMs)
-					const href =
-						item.kind === 'sleep'
-							? (`/sleep/${item.event.id}` as Href)
-							: (`/feeding/${item.event.id}` as Href)
-					const isActive =
-						item.kind === 'sleep'
-							? item.event.endAt == null
-							: item.kind === 'feeding' &&
-								item.event.type === 'breastfeeding' &&
-								item.event.endAt == null
-					return (
-						<Pressable
-							onPress={() => router.push(href)}
-							style={[
-								styles.row,
-								{
-									backgroundColor: colors.surface,
-									borderColor: colors.border,
-								},
-							]}
-							accessibilityRole="button"
-							accessibilityLabel={label}
-						>
-							<Text style={[styles.rowText, { color: colors.text }]}>
-								{label}
+				renderItem={({ item }) => (
+					<Pressable
+						onPress={() => router.push(item.href as Href)}
+						style={[
+							styles.row,
+							{
+								backgroundColor: colors.surface,
+								borderColor: colors.border,
+							},
+						]}
+						accessibilityRole="button"
+						accessibilityLabel={item.label}
+					>
+						<Text style={[styles.rowText, { color: colors.text }]}>
+							{item.label}
+						</Text>
+						{item.isActive ? (
+							<Text style={{ color: colors.primary, marginTop: 4 }}>
+								Активный
 							</Text>
-							{isActive ? (
-								<Text style={{ color: colors.primary, marginTop: 4 }}>
-									Активный
-								</Text>
-							) : null}
-						</Pressable>
-					)
-				}}
+						) : null}
+					</Pressable>
+				)}
 				ListFooterComponent={<BannerAdSlot />}
 			/>
 		</SafeAreaView>
@@ -261,12 +260,13 @@ const styles = StyleSheet.create({
 	lead: { ...typography.body, marginBottom: spacing.sm },
 	filters: {
 		flexDirection: 'row',
+		flexWrap: 'wrap',
 		gap: spacing.sm,
 		marginBottom: spacing.sm,
 	},
 	filterChip: {
-		minHeight: 40,
-		paddingHorizontal: spacing.md,
+		minHeight: 36,
+		paddingHorizontal: spacing.sm,
 		borderRadius: radii.sm,
 		borderWidth: StyleSheet.hairlineWidth,
 		alignItems: 'center',
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
 	},
 	addBtn: {
 		flex: 1,
-		minHeight: 48,
+		minHeight: 44,
 		borderRadius: radii.md,
 		borderWidth: StyleSheet.hairlineWidth,
 		alignItems: 'center',

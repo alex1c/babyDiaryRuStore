@@ -18,8 +18,10 @@ import { getDatabase } from '../db/client'
 import type { SqlExecutor } from '../db/types'
 import type { ThemePreference } from '../models/types'
 import { ChildRepository } from '../repositories/childRepository'
+import { DiaperRepository } from '../repositories/diaperRepository'
 import { EventRepository } from '../repositories/eventRepository'
 import { FeedingRepository } from '../repositories/feedingRepository'
+import { QuickEventRepository } from '../repositories/quickEventRepository'
 import { SettingsRepository } from '../repositories/settingsRepository'
 import { SleepRepository } from '../repositories/sleepRepository'
 import { logger } from '../services/logger'
@@ -33,6 +35,8 @@ interface DatabaseContextValue {
 	events: EventRepository | null
 	sleep: SleepRepository | null
 	feeding: FeedingRepository | null
+	diaper: DiaperRepository | null
+	quickEvents: QuickEventRepository | null
 	settings: SettingsRepository | null
 	themePreference: ThemePreference
 	setThemePreferenceState: (preference: ThemePreference) => void
@@ -54,6 +58,8 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 				events: null,
 				sleep: null,
 				feeding: null,
+				diaper: null,
+				quickEvents: null,
 				settings: null,
 			}
 		}
@@ -62,6 +68,8 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 			events: new EventRepository(db),
 			sleep: new SleepRepository(db),
 			feeding: new FeedingRepository(db),
+			diaper: new DiaperRepository(db),
+			quickEvents: new QuickEventRepository(db),
 			settings: new SettingsRepository(db),
 		}
 	}, [db])
@@ -103,6 +111,8 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 		events: repos.events,
 		sleep: repos.sleep,
 		feeding: repos.feeding,
+		diaper: repos.diaper,
+		quickEvents: repos.quickEvents,
 		settings: repos.settings,
 		themePreference,
 		setThemePreferenceState,

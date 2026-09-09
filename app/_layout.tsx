@@ -139,6 +139,26 @@ function RootNavigator () {
 					options={{ title: 'Кормление', presentation: 'card' }}
 				/>
 				<Stack.Screen
+					name="diaper/index"
+					options={{ title: 'Подгузник', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="diaper/[id]"
+					options={{ title: 'Подгузник', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="event/new"
+					options={{ title: 'Событие', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="event/custom-type"
+					options={{ title: 'Своё событие', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="event/[id]"
+					options={{ title: 'Событие', presentation: 'card' }}
+				/>
+				<Stack.Screen
 					name="settings"
 					options={{ title: 'Настройки', presentation: 'card' }}
 				/>

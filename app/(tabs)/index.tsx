@@ -21,6 +21,10 @@ import {
 	LightweightToast,
 	useLightweightToast,
 } from '@/src/components/LightweightToast'
+import {
+	MoreActionsSheet,
+	type MoreActionId,
+} from '@/src/components/MoreActionsSheet'
 import { QuickActions, type QuickActionId } from '@/src/components/QuickActions'
 import { SleepStatusCard } from '@/src/components/SleepStatusCard'
 import { StatusCard } from '@/src/components/StatusCard'
@@ -32,6 +36,10 @@ import { FeedingValidationError } from '@/src/domain/feedingLabels'
 import { SleepValidationError } from '@/src/domain/sleepValidation'
 import type { BreastSide } from '@/src/models/feeding'
 import {
+	buildTodayDiaperModel,
+	type TodayDiaperModel,
+} from '@/src/presentation/todayDiaperModel'
+import {
 	buildTodayFeedingModel,
 	type TodayFeedingModel,
 } from '@/src/presentation/todayFeedingModel'
@@ -39,7 +47,6 @@ import {
 	buildTodaySleepModel,
 	type TodaySleepModel,
 } from '@/src/presentation/todaySleepModel'
-import { PHASE1_COMING_SOON } from '@/src/presentation/todayViewModel'
 import { logger } from '@/src/services/logger'
 import { useAppTheme } from '@/src/theme/ThemeProvider'
 import { formatDurationMs, durationBetweenMs } from '@/src/utils/durationFormat'
@@ -50,20 +57,26 @@ export default function TodayScreen () {
 	const { colors } = useAppTheme()
 	const router = useRouter()
 	const { activeChild, loading: childLoading } = useActiveChild()
-	const { sleep, feeding } = useDatabase()
+	const { sleep, feeding, diaper, quickEvents } = useDatabase()
 	const { message, showToast } = useLightweightToast()
 
 	const [sleepModel, setSleepModel] = useState<TodaySleepModel | null>(null)
 	const [feedingModel, setFeedingModel] = useState<TodayFeedingModel | null>(
 		null,
 	)
+	const [diaperModel, setDiaperModel] = useState<TodayDiaperModel | null>(null)
+	const [customDefs, setCustomDefs] = useState<{ id: string; name: string }[]>(
+		[],
+	)
+	const [moreOpen, setMoreOpen] = useState(false)
 	const [busy, setBusy] = useState(false)
 	const [loading, setLoading] = useState(true)
 
 	const refresh = useCallback(async () => {
-		if (!sleep || !feeding || !activeChild) {
+		if (!sleep || !feeding || !diaper || !quickEvents || !activeChild) {
 			setSleepModel(null)
 			setFeedingModel(null)
+			setDiaperModel(null)
 			setLoading(false)
 			return
 		}
@@ -88,21 +101,40 @@ export default function TodayScreen () {
 			)
 
 			const activeBf = await feeding.findActiveBreastfeeding(activeChild.id)
-			const latest = await feeding.findLatest(activeChild.id)
+			const latestFeeding = await feeding.findLatest(activeChild.id)
 			const dayFeedings = await feeding.listByChildAndLocalDate(
 				activeChild.id,
 				today,
 			)
 			setFeedingModel(
-				buildTodayFeedingModel(activeBf, latest, dayFeedings, Date.now()),
+				buildTodayFeedingModel(
+					activeBf,
+					latestFeeding,
+					dayFeedings,
+					Date.now(),
+				),
 			)
+
+			const latestDiaper = await diaper.findLatest(activeChild.id)
+			const dayDiapers = await diaper.listByChildAndLocalDate(
+				activeChild.id,
+				today,
+			)
+			setDiaperModel(
+				buildTodayDiaperModel(latestDiaper, dayDiapers, Date.now()),
+			)
+
+			const defs = await quickEvents.listActiveCustomDefinitions(
+				activeChild.id,
+			)
+			setCustomDefs(defs.map((d) => ({ id: d.id, name: d.name })))
 		} catch (error) {
 			logger.error('Failed to refresh Today', error)
 			showToast('Не удалось обновить данные')
 		} finally {
 			setLoading(false)
 		}
-	}, [sleep, feeding, activeChild, showToast])
+	}, [sleep, feeding, diaper, quickEvents, activeChild, showToast])
 
 	useFocusEffect(
 		useCallback(() => {
@@ -250,11 +282,21 @@ export default function TodayScreen () {
 			openFeeding()
 			return
 		}
-		if (id === 'more') {
-			handleAddSleep()
+		if (id === 'diaper') {
+			router.push('/diaper' as Href)
 			return
 		}
-		showToast(PHASE1_COMING_SOON)
+		if (id === 'more') {
+			setMoreOpen(true)
+		}
+	}
+
+	const handleMoreSelect = (id: MoreActionId): void => {
+		if (id === 'custom') {
+			router.push('/event/custom-type' as Href)
+			return
+		}
+		router.push(`/event/new?kind=${id}` as Href)
 	}
 
 	if (childLoading || loading) {
@@ -265,7 +307,7 @@ export default function TodayScreen () {
 		)
 	}
 
-	if (!activeChild || !sleepModel || !feedingModel) {
+	if (!activeChild || !sleepModel || !feedingModel || !diaperModel) {
 		return (
 			<View style={[styles.center, { backgroundColor: colors.background }]}>
 				<Text style={[styles.empty, { color: colors.textSecondary }]}>
@@ -297,6 +339,7 @@ export default function TodayScreen () {
 			value: String(sleepModel.aggregate.finishedCount),
 		},
 		...feedingModel.summaryRows,
+		...diaperModel.summaryRows,
 	]
 
 	return (
@@ -381,15 +424,40 @@ export default function TodayScreen () {
 						title: 'Подгузник',
 						emptyMessage: 'Пока нет записей',
 						ctaLabel: 'Подгузник',
-						hasData: false,
-						summary: 'Пока нет записей',
+						hasData: diaperModel.hasData,
+						summary: diaperModel.latestSummary,
 					}}
-					onPressCta={() => showToast(PHASE1_COMING_SOON)}
+					onPressCta={() => router.push('/diaper' as Href)}
 				/>
+				{diaperModel.latest ? (
+					<Pressable
+						onPress={() =>
+							router.push(`/diaper/${diaperModel.latest!.id}` as Href)
+						}
+						style={styles.editLink}
+						accessibilityRole="button"
+						accessibilityLabel="Изменить последний подгузник"
+					>
+						<Text style={{ color: colors.primary }}>
+							Подробности подгузника
+						</Text>
+					</Pressable>
+				) : null}
 
 				<TodaySummary rows={summaryRows} title="Сегодня" />
 				<BannerAdSlot />
 			</ScrollView>
+			<MoreActionsSheet
+				visible={moreOpen}
+				onClose={() => setMoreOpen(false)}
+				onSelect={handleMoreSelect}
+				customNames={customDefs}
+				onSelectCustom={(definitionId) =>
+					router.push(
+						`/event/new?kind=custom&definitionId=${definitionId}` as Href,
+					)
+				}
+			/>
 			<LightweightToast message={message} />
 		</SafeAreaView>
 	)

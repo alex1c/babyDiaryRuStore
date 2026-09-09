@@ -295,6 +295,67 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return { changes: 1, lastInsertRowId: 0 }
 		}
 
+		if (/^UPDATE event_diaper SET/i.test(normalized)) {
+			const eventId = params[params.length - 1]
+			const row = this.tables.event_diaper.find((r) => r.event_id === eventId)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			const [wet, dirty, hasRash, color, consistency] = params
+			row.wet = wet as number
+			row.dirty = dirty as number
+			row.has_rash = hasRash as number
+			row.color = color as string | null
+			row.consistency = consistency as string | null
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE event_activity SET place = \? WHERE event_id = \?$/i.test(normalized)) {
+			const [place, eventId] = params
+			const row = this.tables.event_activity.find((r) => r.event_id === eventId)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			row.place = place as string | null
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE event_temperature SET celsius = \? WHERE event_id = \?$/i.test(normalized)) {
+			const [celsius, eventId] = params
+			const row = this.tables.event_temperature.find((r) => r.event_id === eventId)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			row.celsius = celsius as number
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE event_medicine SET name = \?, dose_text = \?, unit = \? WHERE event_id = \?$/i.test(normalized)) {
+			const [name, dose, unit, eventId] = params
+			const row = this.tables.event_medicine.find((r) => r.event_id === eventId)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			row.name = name as string
+			row.dose_text = dose as string | null
+			row.unit = unit as string | null
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE custom_event_definitions SET/i.test(normalized)) {
+			const id = params[params.length - 1]
+			const row = this.tables.custom_event_definitions.find((r) => r.id === id)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			const [name, iconKey, isActive, updatedAt] = params
+			row.name = name as string
+			row.icon_key = iconKey as string | null
+			row.is_active = isActive as number
+			row.updated_at = updatedAt as string
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
 		if (/^UPDATE events SET start_at = \?, end_at = \?, start_local_date = \?, end_local_date = \?, notes = \?, updated_at = \? WHERE id = \?$/i.test(normalized)) {
 			const [
 				startAt,
@@ -409,6 +470,43 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return (rows[0] as T) ?? null
 		}
 
+		if (/INNER JOIN event_diaper/i.test(normalized)) {
+			const rows = this.queryDiaperJoins(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
+		if (/INNER JOIN event_activity/i.test(normalized)) {
+			const rows = this.queryActivityJoins(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
+		if (/INNER JOIN event_temperature/i.test(normalized)) {
+			const rows = this.queryTempJoins(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
+		if (/INNER JOIN event_medicine/i.test(normalized) && /FROM events e/i.test(normalized)) {
+			const rows = this.queryMedicineJoins(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
+		if (/INNER JOIN event_custom/i.test(normalized)) {
+			const rows = this.queryCustomJoins(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
+		if (/^SELECT id, child_id, name, icon_key, color_token, is_active, created_at, updated_at FROM custom_event_definitions WHERE id = \?$/i.test(normalized)) {
+			const row = this.tables.custom_event_definitions.find((r) => r.id === params[0])
+			return (row as T) ?? null
+		}
+
+		if (/^SELECT id, child_id, start_at, end_at, start_local_date, end_local_date, title, notes, created_at, updated_at FROM events WHERE type = 'note' AND id = \?$/i.test(normalized)) {
+			const row = this.tables.events.find(
+				(r) => r.type === 'note' && r.id === params[0],
+			)
+			return (row as T) ?? null
+		}
+
 		const byId = normalized.match(/^SELECT \* FROM (\w+) WHERE id = \?$/i)
 		if (byId) {
 			const table = byId[1]
@@ -449,6 +547,44 @@ export class MemorySqlExecutor implements SqlExecutor {
 
 		if (/INNER JOIN event_feeding/i.test(normalized)) {
 			return this.queryFeedingJoins(normalized, params) as T[]
+		}
+
+		if (/INNER JOIN event_diaper/i.test(normalized)) {
+			return this.queryDiaperJoins(normalized, params) as T[]
+		}
+
+		if (/INNER JOIN event_activity/i.test(normalized)) {
+			return this.queryActivityJoins(normalized, params) as T[]
+		}
+
+		if (/INNER JOIN event_temperature/i.test(normalized)) {
+			return this.queryTempJoins(normalized, params) as T[]
+		}
+
+		if (/INNER JOIN event_medicine m ON m\.event_id = e\.id/i.test(normalized)) {
+			return this.queryMedicineJoins(normalized, params) as T[]
+		}
+
+		if (/FROM event_medicine m INNER JOIN events e/i.test(normalized)) {
+			return this.queryRecentMedicineNames(normalized, params) as T[]
+		}
+
+		if (/INNER JOIN event_custom/i.test(normalized)) {
+			return this.queryCustomJoins(normalized, params) as T[]
+		}
+
+		if (/FROM custom_event_definitions/i.test(normalized)) {
+			return this.queryCustomDefinitions(normalized, params) as T[]
+		}
+
+		if (/FROM events WHERE type = 'note' AND child_id = \?/i.test(normalized)) {
+			const [childId, limit] = params
+			return [...this.tables.events]
+				.filter((r) => r.type === 'note' && r.child_id === childId)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+				.slice(0, typeof limit === 'number' ? limit : undefined) as T[]
 		}
 
 		if (/^SELECT name FROM recent_foods WHERE child_id = \?/i.test(normalized)) {
@@ -713,6 +849,312 @@ export class MemorySqlExecutor implements SqlExecutor {
 		return rows
 	}
 
+	private queryDiaperJoins (sql: string, params: SqlParam[]): Row[] {
+		let rows = this.tables.events
+			.filter((e) => e.type === 'diaper')
+			.map((e) => this.joinDiaperRow(e))
+			.filter((r): r is Row => r != null)
+
+		if (/AND e\.id = \?/i.test(sql)) {
+			return rows.filter((r) => r.id === params[0])
+		}
+		if (/AND e\.child_id = \? AND e\.start_local_date = \?/i.test(sql)) {
+			const [childId, localDate] = params
+			return rows
+				.filter(
+					(r) =>
+						r.child_id === childId &&
+						r.start_local_date === localDate,
+				)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+		}
+		if (/AND e\.child_id = \?/i.test(sql)) {
+			const childId = params[0]
+			const limit =
+				typeof params[1] === 'number' ? params[1] : rows.length
+			return rows
+				.filter((r) => r.child_id === childId)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+				.slice(0, limit)
+		}
+		return rows
+	}
+
+	private joinDiaperRow (event: Row): Row | null {
+		const detail = this.tables.event_diaper.find(
+			(d) => d.event_id === event.id,
+		)
+		if (!detail) {
+			return null
+		}
+		return {
+			id: event.id ?? null,
+			child_id: event.child_id ?? null,
+			start_at: event.start_at ?? null,
+			end_at: event.end_at ?? null,
+			start_local_date: event.start_local_date ?? null,
+			end_local_date: event.end_local_date ?? null,
+			notes: event.notes ?? null,
+			created_at: event.created_at ?? null,
+			updated_at: event.updated_at ?? null,
+			wet: detail.wet ?? 0,
+			dirty: detail.dirty ?? 0,
+			has_rash: detail.has_rash ?? 0,
+			color: detail.color ?? null,
+			consistency: detail.consistency ?? null,
+		}
+	}
+
+	private queryActivityJoins (sql: string, params: SqlParam[]): Row[] {
+		const types = new Set([
+			'walk',
+			'bath',
+			'tummy_time',
+			'massage',
+			'doctor',
+		])
+		let rows = this.tables.events
+			.filter((e) => types.has(String(e.type)))
+			.map((e) => this.joinActivityRow(e))
+			.filter((r): r is Row => r != null)
+
+		if (/AND e\.id = \?/i.test(sql)) {
+			return rows.filter((r) => r.id === params[0])
+		}
+		if (/AND e\.child_id = \?/i.test(sql)) {
+			const childId = params[0]
+			const limit =
+				typeof params[1] === 'number' ? params[1] : rows.length
+			return rows
+				.filter((r) => r.child_id === childId)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+				.slice(0, limit)
+		}
+		return rows
+	}
+
+	private joinActivityRow (event: Row): Row | null {
+		const detail = this.tables.event_activity.find(
+			(a) => a.event_id === event.id,
+		)
+		if (!detail) {
+			return null
+		}
+		return {
+			id: event.id ?? null,
+			child_id: event.child_id ?? null,
+			type: event.type ?? null,
+			start_at: event.start_at ?? null,
+			end_at: event.end_at ?? null,
+			start_local_date: event.start_local_date ?? null,
+			end_local_date: event.end_local_date ?? null,
+			notes: event.notes ?? null,
+			created_at: event.created_at ?? null,
+			updated_at: event.updated_at ?? null,
+			place: detail.place ?? null,
+		}
+	}
+
+	private queryTempJoins (sql: string, params: SqlParam[]): Row[] {
+		let rows = this.tables.events
+			.filter((e) => e.type === 'temperature')
+			.map((e) => this.joinTempRow(e))
+			.filter((r): r is Row => r != null)
+
+		if (/AND e\.id = \?/i.test(sql)) {
+			return rows.filter((r) => r.id === params[0])
+		}
+		if (/AND e\.child_id = \?/i.test(sql)) {
+			const childId = params[0]
+			const limit =
+				typeof params[1] === 'number' ? params[1] : rows.length
+			return rows
+				.filter((r) => r.child_id === childId)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+				.slice(0, limit)
+		}
+		return rows
+	}
+
+	private joinTempRow (event: Row): Row | null {
+		const detail = this.tables.event_temperature.find(
+			(t) => t.event_id === event.id,
+		)
+		if (!detail) {
+			return null
+		}
+		return {
+			id: event.id ?? null,
+			child_id: event.child_id ?? null,
+			start_at: event.start_at ?? null,
+			end_at: event.end_at ?? null,
+			start_local_date: event.start_local_date ?? null,
+			end_local_date: event.end_local_date ?? null,
+			notes: event.notes ?? null,
+			created_at: event.created_at ?? null,
+			updated_at: event.updated_at ?? null,
+			celsius: detail.celsius ?? null,
+		}
+	}
+
+	private queryMedicineJoins (sql: string, params: SqlParam[]): Row[] {
+		let rows = this.tables.events
+			.filter((e) => e.type === 'medicine' || e.type === 'vitamin')
+			.map((e) => this.joinMedicineRow(e))
+			.filter((r): r is Row => r != null)
+
+		if (/AND e\.id = \?/i.test(sql)) {
+			return rows.filter((r) => r.id === params[0])
+		}
+		if (/AND e\.child_id = \?/i.test(sql)) {
+			const childId = params[0]
+			const limit =
+				typeof params[1] === 'number' ? params[1] : rows.length
+			return rows
+				.filter((r) => r.child_id === childId)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+				.slice(0, limit)
+		}
+		return rows
+	}
+
+	private joinMedicineRow (event: Row): Row | null {
+		const detail = this.tables.event_medicine.find(
+			(m) => m.event_id === event.id,
+		)
+		if (!detail) {
+			return null
+		}
+		return {
+			id: event.id ?? null,
+			child_id: event.child_id ?? null,
+			type: event.type ?? null,
+			start_at: event.start_at ?? null,
+			end_at: event.end_at ?? null,
+			start_local_date: event.start_local_date ?? null,
+			end_local_date: event.end_local_date ?? null,
+			notes: event.notes ?? null,
+			created_at: event.created_at ?? null,
+			updated_at: event.updated_at ?? null,
+			name: detail.name ?? null,
+			dose_text: detail.dose_text ?? null,
+			unit: detail.unit ?? null,
+			kind: detail.kind ?? 'medicine',
+		}
+	}
+
+	private queryRecentMedicineNames (
+		_sql: string,
+		params: SqlParam[],
+	): Row[] {
+		const [childId, type, kind, limit] = params
+		const mapped: Row[] = []
+		for (const e of this.tables.events) {
+			if (e.child_id !== childId || e.type !== type) {
+				continue
+			}
+			const detail = this.tables.event_medicine.find(
+				(m) => m.event_id === e.id && m.kind === kind,
+			)
+			if (!detail) {
+				continue
+			}
+			mapped.push({
+				name: detail.name ?? null,
+				start_at: e.start_at ?? null,
+			})
+		}
+		return mapped
+			.sort((a, b) =>
+				String(b.start_at).localeCompare(String(a.start_at)),
+			)
+			.slice(0, typeof limit === 'number' ? limit : undefined)
+			.map((r) => ({ name: r.name ?? null }))
+	}
+
+	private queryCustomJoins (sql: string, params: SqlParam[]): Row[] {
+		let rows = this.tables.events
+			.filter((e) => e.type === 'custom')
+			.map((e) => this.joinCustomRow(e))
+			.filter((r): r is Row => r != null)
+
+		if (/AND e\.id = \?/i.test(sql)) {
+			return rows.filter((r) => r.id === params[0])
+		}
+		if (/AND e\.child_id = \?/i.test(sql)) {
+			const childId = params[0]
+			const limit =
+				typeof params[1] === 'number' ? params[1] : rows.length
+			return rows
+				.filter((r) => r.child_id === childId)
+				.sort((a, b) =>
+					String(b.start_at).localeCompare(String(a.start_at)),
+				)
+				.slice(0, limit)
+		}
+		return rows
+	}
+
+	private joinCustomRow (event: Row): Row | null {
+		const detail = this.tables.event_custom.find(
+			(c) => c.event_id === event.id,
+		)
+		if (!detail) {
+			return null
+		}
+		const def = this.tables.custom_event_definitions.find(
+			(d) => d.id === detail.definition_id,
+		)
+		return {
+			id: event.id ?? null,
+			child_id: event.child_id ?? null,
+			start_at: event.start_at ?? null,
+			end_at: event.end_at ?? null,
+			start_local_date: event.start_local_date ?? null,
+			end_local_date: event.end_local_date ?? null,
+			notes: event.notes ?? null,
+			created_at: event.created_at ?? null,
+			updated_at: event.updated_at ?? null,
+			definition_id: detail.definition_id ?? null,
+			definition_name: def?.name ?? null,
+			definition_icon_key: def?.icon_key ?? null,
+		}
+	}
+
+	private queryCustomDefinitions (
+		sql: string,
+		params: SqlParam[],
+	): Row[] {
+		let rows = [...this.tables.custom_event_definitions]
+		const childId = params[0]
+		rows = rows.filter(
+			(r) => r.child_id === childId || r.child_id == null,
+		)
+		if (/is_active = 1/i.test(sql)) {
+			rows = rows.filter((r) => Number(r.is_active) === 1)
+		}
+		rows.sort((a, b) => {
+			const activeCmp = Number(b.is_active) - Number(a.is_active)
+			if (activeCmp !== 0 && /is_active DESC/i.test(sql)) {
+				return activeCmp
+			}
+			return String(a.name).localeCompare(String(b.name), undefined, {
+				sensitivity: 'base',
+			})
+		})
+		return rows
+	}
+
 	/** Apply initial migration metadata for tests that skip exec DDL. */
 	markMigrated (version = 1): void {
 		this.userVersion = version
@@ -733,12 +1175,14 @@ export class MemorySqlExecutor implements SqlExecutor {
 		if (!this.foreignKeysEnabled) {
 			return
 		}
-		if (table === 'events' || table === 'recent_foods') {
-			const child = this.tables.children.find((c) => c.id === row.child_id)
-			if (!child) {
-				throw new Error(
-					`FOREIGN KEY constraint failed: ${table}.child_id`,
-				)
+		if (table === 'events' || table === 'recent_foods' || table === 'custom_event_definitions') {
+			if (row.child_id != null) {
+				const child = this.tables.children.find((c) => c.id === row.child_id)
+				if (!child) {
+					throw new Error(
+						`FOREIGN KEY constraint failed: ${table}.child_id`,
+					)
+				}
 			}
 		}
 		if (

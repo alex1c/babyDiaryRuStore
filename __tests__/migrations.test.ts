@@ -12,9 +12,9 @@ import { LATEST_SCHEMA_VERSION, MIGRATIONS } from '../src/db/migrations'
 describe('migrations', () => {
 	it('exposes a monotonic schema version sequence', () => {
 		expect(MIGRATIONS.length).toBeGreaterThan(0)
-		expect(LATEST_SCHEMA_VERSION).toBe(3)
-		expect(getExpectedSchemaVersion()).toBe(3)
-		expect(MIGRATIONS.map((m) => m.version)).toEqual([1, 2, 3])
+		expect(LATEST_SCHEMA_VERSION).toBe(4)
+		expect(getExpectedSchemaVersion()).toBe(4)
+		expect(MIGRATIONS.map((m) => m.version)).toEqual([1, 2, 3, 4])
 
 		const v1 = MIGRATIONS[0]?.sql ?? ''
 		expect(v1).toContain('CREATE TABLE children')
@@ -32,6 +32,11 @@ describe('migrations', () => {
 		const v3 = MIGRATIONS[2]?.sql ?? ''
 		expect(v3).toContain('left_duration_seconds')
 		expect(v3).toContain('recent_foods')
+
+		const v4 = MIGRATIONS[3]?.sql ?? ''
+		expect(v4).toContain('consistency')
+		expect(v4).toContain('kind')
+		expect(v4).toContain('child_id')
 	})
 
 	it('is a no-op when already at latest version', async () => {
@@ -53,13 +58,14 @@ describe('migrations', () => {
 			'1:initial_schema',
 			'2:sleep_type_on_event_sleep',
 			'3:feeding_details_and_recent_foods',
+			'4:diaper_details_and_quick_events',
 		])
-		expect(db.getTable('schema_migrations')).toHaveLength(3)
+		expect(db.getTable('schema_migrations')).toHaveLength(4)
 	})
 
-	it('upgrades from v1 preserving children data', async () => {
+	it('upgrades from v3 preserving children data', async () => {
 		const db = new MemorySqlExecutor()
-		db.markMigrated(1)
+		db.markMigrated(3)
 		const now = new Date().toISOString()
 		await db.runAsync(
 			`INSERT INTO children (
@@ -76,12 +82,9 @@ describe('migrations', () => {
 		)
 
 		const result = await migrateDatabase(db)
-		expect(result.fromVersion).toBe(1)
-		expect(result.toVersion).toBe(3)
-		expect(result.applied).toEqual([
-			'2:sleep_type_on_event_sleep',
-			'3:feeding_details_and_recent_foods',
-		])
+		expect(result.fromVersion).toBe(3)
+		expect(result.toVersion).toBe(4)
+		expect(result.applied).toEqual(['4:diaper_details_and_quick_events'])
 		expect(db.getTable('children')).toHaveLength(1)
 		expect(db.getTable('children')[0]?.name).toBe('Mila')
 	})
