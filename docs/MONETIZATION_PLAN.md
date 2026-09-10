@@ -54,7 +54,11 @@ ID stored only. No preload, show, or feature gating.
 
 ## AppMetrica
 
-Not connected — waiting for a real production API key.
+Connected via `@appmetrica/react-native-analytics` and `src/analytics/`.
+
+- App ID / API key: `d2ec0cc3-c329-4f17-86f7-5d820b2082dd`
+- Events are allowlisted semantic facts only (no baby/health payloads)
+- Failures never block user flows
 
 ## Native
 

@@ -32,6 +32,7 @@ import { SmartTodayCard } from '@/src/components/SmartTodayCard'
 import { StatusCard } from '@/src/components/StatusCard'
 import { TodayChildHeader } from '@/src/components/TodayChildHeader'
 import { TodaySummary } from '@/src/components/TodaySummary'
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import { breastfeedingLiveTotals } from '@/src/domain/breastfeedingDuration'
@@ -209,6 +210,8 @@ export default function TodayScreen () {
 		setBusy(true)
 		try {
 			await sleep.start({ childId: activeChild.id, sleepType: 'auto' })
+			// Semantic only — never duration or timestamps.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.sleepStarted)
 			await refresh()
 		} catch (error) {
 			logger.error('start sleep failed', error)
@@ -232,6 +235,8 @@ export default function TodayScreen () {
 			const finished = await sleep.finish(sleepModel.activeSleep.id)
 			const ms = durationBetweenMs(finished.startAt, finished.endAt)
 			showToast(`Сон ${formatDurationMs(ms)} сохранён`)
+			// Semantic only — never duration values in analytics.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.sleepFinished)
 			await refresh()
 		} catch (error) {
 			logger.error('finish sleep failed', error)
@@ -305,6 +310,10 @@ export default function TodayScreen () {
 			showToast(
 				`Кормление ${formatDurationMs(totals.totalSeconds * 1000)} сохранено`,
 			)
+			// Feed type enum only — track once on finish (not on start).
+			trackAnalyticsEvent(ANALYTICS_EVENTS.feedingAdded, {
+				feeding_type: 'breastfeeding',
+			})
 			if (reminderService && activeChild) {
 				await reminderService.rescheduleNoFeedingForChild(activeChild.id)
 			}

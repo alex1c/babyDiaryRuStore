@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { FormKeyboardShell } from '@/src/components/FormKeyboardShell'
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import {
@@ -164,6 +165,10 @@ export default function ReminderEditScreen () {
 				await reminderService.update(editId, payload)
 			} else {
 				await reminderService.create(payload)
+				// Create only — reminder_type snake_case enum, never title/notes/dose.
+				trackAnalyticsEvent(ANALYTICS_EVENTS.reminderCreated, {
+					reminder_type: type,
+				})
 			}
 			router.back()
 		} catch (err) {

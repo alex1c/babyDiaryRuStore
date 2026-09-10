@@ -12,6 +12,14 @@ jest.mock('expo-crypto', () => ({
 	},
 }))
 
+jest.mock('@appmetrica/react-native-analytics', () => ({
+	__esModule: true,
+	default: {
+		activate: jest.fn(),
+		reportEvent: jest.fn(),
+	},
+}))
+
 jest.mock('yandex-mobile-ads', () => ({
 	MobileAds: {
 		initialize: jest.fn(async () => undefined),

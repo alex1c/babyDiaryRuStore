@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { BannerAdSlot } from '@/src/components/BannerAdSlot'
 import { ManagedImage } from '@/src/components/ManagedImage'
 import { SimpleGrowthChart } from '@/src/components/SimpleGrowthChart'
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import { buildGrowthChartPoints } from '@/src/domain/growthCharts'
@@ -78,6 +79,8 @@ export default function DevelopmentScreen () {
 
 	useFocusEffect(
 		useCallback(() => {
+			// Screen focus only — no measurement or milestone payload.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.developmentOpened)
 			setLoading(true)
 			void refresh()
 		}, [refresh]),

@@ -12,6 +12,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 
 import { AppErrorBoundary } from '@/src/components/AppErrorBoundary'
 import { AdsProvider } from '@/src/ads/AdsProvider'
+import { AnalyticsProvider } from '@/src/analytics/AnalyticsProvider'
 import {
 	ActiveChildProvider,
 	useActiveChild,
@@ -54,7 +55,9 @@ function OnboardingGate ({ children }: { children: React.ReactNode }) {
 		}
 		const first = String(segments[0] ?? '')
 		const onOnboarding = first === 'onboarding'
-		if (needsOnboarding && !onOnboarding) {
+		// Allow __DEV__ screenshot seeding before the first child exists.
+		const onDevSeed = first === 'dev'
+		if (needsOnboarding && !onOnboarding && !onDevSeed) {
 			router.replace('/onboarding' as Href)
 		} else if (!needsOnboarding && onOnboarding) {
 			router.replace('/(tabs)' as Href)
@@ -94,6 +97,10 @@ function RootNavigator () {
 				<Stack.Screen
 					name="onboarding"
 					options={{ headerShown: false, animation: 'fade' }}
+				/>
+				<Stack.Screen
+					name="dev/seed-demo"
+					options={{ title: 'Demo seed', presentation: 'card' }}
 				/>
 				<Stack.Screen
 					name="profile"
@@ -281,11 +288,13 @@ export default function RootLayout () {
 						<DatabaseProvider>
 							<ThemeSync>
 								<ActiveChildProvider>
-									<AdsProvider>
-										<OnboardingGate>
-											<RootNavigator />
-										</OnboardingGate>
-									</AdsProvider>
+									<AnalyticsProvider>
+										<AdsProvider>
+											<OnboardingGate>
+												<RootNavigator />
+											</OnboardingGate>
+										</AdsProvider>
+									</AnalyticsProvider>
 								</ActiveChildProvider>
 							</ThemeSync>
 						</DatabaseProvider>

@@ -14,6 +14,7 @@ import {
 import { useFocusEffect, useRouter, type Href } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import { HEALTH_DISCLAIMER } from '@/src/domain/healthLabels'
@@ -76,6 +77,8 @@ export default function HealthScreen () {
 
 	useFocusEffect(
 		useCallback(() => {
+			// Screen focus only — never temperatures, medicines, or notes.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.healthOpened)
 			setLoading(true)
 			void refresh()
 		}, [refresh]),

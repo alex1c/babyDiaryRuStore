@@ -6,6 +6,7 @@ import { useRouter, type Href } from 'expo-router'
 import { StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { ChildProfileForm } from '@/src/components/ChildProfileForm'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
@@ -40,6 +41,11 @@ export default function OnboardingScreen () {
 			await settings.setOnboardingCompleted(true)
 			await setActiveChildId(child.id)
 			await refresh()
+			// Privacy-safe: source enum only — never child name or birth date.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.childAdded, {
+				source: 'onboarding',
+			})
+			trackAnalyticsEvent(ANALYTICS_EVENTS.onboardingCompleted)
 			// Soft training offer once — never blocks the app permanently.
 			const showOffer = await settings.shouldShowTrainingOffer()
 			if (showOffer) {

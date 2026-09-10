@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { BannerAdSlot } from '@/src/components/BannerAdSlot'
 import { SimpleDayBarChart } from '@/src/components/SimpleDayBarChart'
 import { SimpleGrowthChart } from '@/src/components/SimpleGrowthChart'
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import { buildGrowthChartPoints } from '@/src/domain/growthCharts'
@@ -131,6 +132,18 @@ export default function StatsScreen () {
 	// Initial `loading` is true until the first fetch finishes.
 	useFocusEffect(
 		useCallback(() => {
+			// Period enum only when it matches the allowlist (skip "today").
+			const safePeriod =
+				period === '7' ||
+				period === '30' ||
+				period === '90' ||
+				period === 'all' ||
+				period === 'custom'
+					? period
+					: undefined
+			trackAnalyticsEvent(ANALYTICS_EVENTS.statisticsOpened, {
+				...(safePeriod ? { period: safePeriod } : {}),
+			})
 			void refresh(period, true)
 		}, [refresh, period]),
 	)

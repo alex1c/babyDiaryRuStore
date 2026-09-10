@@ -23,6 +23,7 @@ import {
 	LightweightToast,
 	useLightweightToast,
 } from '@/src/components/LightweightToast'
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import { FeedingValidationError } from '@/src/domain/feedingLabels'
@@ -98,6 +99,10 @@ export default function ManualBreastfeedingScreen () {
 				leftDurationSeconds: left,
 				rightDurationSeconds: right,
 				notes: notes.trim() || null,
+			})
+			// Feeding type enum only — never durations or notes.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.feedingAdded, {
+				feeding_type: 'manual',
 			})
 			showToast('Кормление сохранено')
 			router.replace('/(tabs)' as Href)

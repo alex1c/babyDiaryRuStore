@@ -18,6 +18,7 @@ import {
 	bannerUnitForPlacement,
 	type BannerPlacement,
 } from './adUnits'
+import { isStoreScreenshotMode } from './storeScreenshotMode'
 
 interface BannerAdProps {
 	placement: BannerPlacement
@@ -112,7 +113,7 @@ export function BannerAd ({ placement }: BannerAdProps) {
 		}
 	}
 
-	if (!visible || !api) {
+	if (!visible || !api || isStoreScreenshotMode()) {
 		return null
 	}
 

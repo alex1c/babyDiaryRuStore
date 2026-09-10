@@ -12,6 +12,7 @@ import {
 	LightweightToast,
 	useLightweightToast,
 } from '@/src/components/LightweightToast'
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import { diaperKindLabel } from '@/src/domain/diaperLabels'
@@ -39,6 +40,10 @@ export default function DiaperQuickScreen () {
 			const created = await diaper.create({
 				childId: activeChild.id,
 				kind,
+			})
+			// Kind enum only — never notes or free text.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.diaperAdded, {
+				diaper_kind: kind,
 			})
 			showToast(`${diaperKindLabel(kind)} сохранён`)
 			router.replace(`/(tabs)` as Href)

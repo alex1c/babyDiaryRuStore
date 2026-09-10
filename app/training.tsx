@@ -3,7 +3,7 @@
  */
 
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
 	Pressable,
 	ScrollView,
@@ -13,6 +13,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import {
 	canGoBack,
@@ -51,6 +52,11 @@ export default function TrainingScreen () {
 	const ratio = progressRatio(nav)
 	const label = progressLabel(nav)
 
+	// Screen open only — no training content or page index in props.
+	useEffect(() => {
+		trackAnalyticsEvent(ANALYTICS_EVENTS.trainingOpened)
+	}, [])
+
 	const finishAndGoHome = async (markCompleted: boolean): Promise<void> => {
 		if (busy) {
 			return
@@ -60,6 +66,8 @@ export default function TrainingScreen () {
 			if (settings) {
 				if (markCompleted) {
 					await settings.setTrainingCompleted(true)
+					// Fired after successful mark — no step count or free text.
+					trackAnalyticsEvent(ANALYTICS_EVENTS.trainingCompleted)
 				}
 				await settings.setTrainingOfferDismissed(true)
 			}

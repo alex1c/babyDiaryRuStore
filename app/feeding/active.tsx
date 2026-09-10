@@ -22,6 +22,7 @@ import {
 	LightweightToast,
 	useLightweightToast,
 } from '@/src/components/LightweightToast'
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import { breastfeedingLiveTotals } from '@/src/domain/breastfeedingDuration'
@@ -101,6 +102,10 @@ export default function ActiveBreastfeedingScreen () {
 			showToast(
 				`Кормление ${formatDurationMs(totals.totalSeconds * 1000)} сохранено`,
 			)
+			// Alternate finish path (not Today) — type enum only, no duration.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.feedingAdded, {
+				feeding_type: 'breastfeeding',
+			})
 			if (reminderService && activeChild) {
 				await reminderService.rescheduleNoFeedingForChild(activeChild.id)
 			}

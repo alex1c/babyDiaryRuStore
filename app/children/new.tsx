@@ -5,6 +5,7 @@
 import { useRouter } from 'expo-router'
 import { StyleSheet, View } from 'react-native'
 
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { ChildProfileForm } from '@/src/components/ChildProfileForm'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
@@ -40,6 +41,10 @@ export default function NewChildScreen () {
 			await settings.setActiveChildId(child.id)
 			await setActiveChildId(child.id)
 			await refresh()
+			// Privacy-safe: source enum only — never child name or birth date.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.childAdded, {
+				source: 'settings',
+			})
 			router.replace('/(tabs)' as never)
 		} catch (error) {
 			logger.error('Failed to create child', error)

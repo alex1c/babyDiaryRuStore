@@ -14,6 +14,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { shareExistingPdf } from '@/src/services/pdfGenerate'
 import { logger } from '@/src/services/logger'
 import { useAppTheme } from '@/src/theme/ThemeProvider'
@@ -63,6 +64,8 @@ export default function ReportReadyScreen () {
 		setError(null)
 		try {
 			await shareExistingPdf(uri)
+			// Successful share only — never URI, file name, or PDF content.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.reportShared)
 		} catch (err) {
 			logger.error('share pdf failed', err)
 			setError('Не удалось поделиться файлом')

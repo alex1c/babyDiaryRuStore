@@ -44,11 +44,16 @@ credentials/*
 keystore.properties
 **/keystore.properties
 
-# release artifacts — ignore signed binaries; keep store icon assets tracked
+# release artifacts — ignore signed binaries; keep store assets tracked
 release-artifacts/*
 !release-artifacts/.gitkeep
 !release-artifacts/icon-512.png
 !release-artifacts/ICON_NOTES.md
+!release-artifacts/PRIVACY_INFO.md
+!release-artifacts/RELEASE_INFO.md
+!release-artifacts/RUSTORE_LISTING_RU.md
+!release-artifacts/screenshots/
+!release-artifacts/screenshots/**/*.png
 
 # typescript
 *.tsbuildinfo
@@ -70,3 +75,6 @@ coverage/
 
 # local visual smoke artifacts
 .tmp-*/
+
+android/local.properties
+

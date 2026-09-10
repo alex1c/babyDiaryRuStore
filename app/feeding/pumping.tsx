@@ -19,6 +19,7 @@ import {
 	LightweightToast,
 	useLightweightToast,
 } from '@/src/components/LightweightToast'
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import {
@@ -71,6 +72,10 @@ export default function PumpingScreen () {
 				amountMl: ml,
 				durationSeconds: mins * 60,
 				notes: notes.trim() || null,
+			})
+			// Feeding type enum only — never ml, duration, side, or notes.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.feedingAdded, {
+				feeding_type: 'pumping',
 			})
 			showToast(`Сцеживание ${ml} мл сохранено`)
 			router.replace('/(tabs)' as Href)

@@ -21,6 +21,7 @@ import {
 	LightweightToast,
 	useLightweightToast,
 } from '@/src/components/LightweightToast'
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import {
@@ -86,6 +87,10 @@ export default function SolidFoodScreen () {
 				amountText: amountText.trim() || null,
 				reaction,
 				notes: notes.trim() || null,
+			})
+			// Feeding type enum only — never food name, amount, or notes.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.feedingAdded, {
+				feeding_type: 'solid',
 			})
 			showToast(`Прикорм · ${foodName.trim()} сохранён`)
 			router.replace('/(tabs)' as Href)

@@ -15,6 +15,7 @@ import {
 import * as FileSystem from 'expo-file-system/legacy'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import type { BackupKind, BackupManifest } from '@/src/domain/backupManifest'
@@ -139,6 +140,10 @@ export default function BackupScreen () {
 			setStatus(
 				`Готово · ${formatBytes(result.zipByteLength)}. Можно поделиться файлом.`,
 			)
+			// Backup kind enum only — never paths, sizes, or child counts.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.backupCreated, {
+				backup_kind: kind,
+			})
 			await shareBackupZipFile(uri)
 		} catch (err) {
 			logger.error('backup create failed', err)
@@ -207,6 +212,8 @@ export default function BackupScreen () {
 			setPreview(null)
 			setPendingZip(null)
 			setStatus('Восстановление завершено.')
+			// Restore success only — never manifest contents or file paths.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.backupRestored)
 			Alert.alert('Готово', 'Данные успешно восстановлены.')
 		} catch (err) {
 			logger.error('backup restore failed', err)

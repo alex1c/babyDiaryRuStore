@@ -16,6 +16,7 @@ import { useFocusEffect } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { ReportPeriodControls } from '@/src/components/ReportPeriodControls'
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import { addLocalDays } from '@/src/domain/statsPeriod'
@@ -146,6 +147,10 @@ export default function ShareSummaryScreen () {
 		setError(null)
 		try {
 			await Share.share({ message: preview, title: 'Сводка дневника' })
+			// Kind enum only — never the shared text body.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.reportShared, {
+				report_kind: 'share_text',
+			})
 		} catch (err) {
 			logger.error('share failed', err)
 			setError('Не удалось открыть окно «Поделиться»')

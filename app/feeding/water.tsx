@@ -19,6 +19,7 @@ import {
 	LightweightToast,
 	useLightweightToast,
 } from '@/src/components/LightweightToast'
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import {
@@ -59,6 +60,10 @@ export default function WaterFeedingScreen () {
 				childId: activeChild.id,
 				amountMl: ml,
 				notes: notes.trim() || null,
+			})
+			// Feeding type enum only — never ml or notes.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.feedingAdded, {
+				feeding_type: 'water',
 			})
 			showToast(`Вода ${ml} мл сохранена`)
 			router.replace('/(tabs)' as Href)

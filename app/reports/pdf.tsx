@@ -15,6 +15,7 @@ import { useRouter, type Href } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { ReportPeriodControls } from '@/src/components/ReportPeriodControls'
+import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/src/analytics'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import {
@@ -131,6 +132,11 @@ export default function PdfReportScreen () {
 				html,
 				startDate: bundle.period.startDate,
 				endDate: bundle.period.endDate,
+			})
+
+			// Report kind enum only — never dates, file names, or HTML.
+			trackAnalyticsEvent(ANALYTICS_EVENTS.reportCreated, {
+				report_kind: 'period',
 			})
 
 			router.push({
