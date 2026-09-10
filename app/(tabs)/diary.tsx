@@ -493,7 +493,7 @@ export default function DiaryScreen () {
 								? 'Ничего не найдено'
 								: viewMode === 'day'
 									? 'В этот день пока нет записей'
-									: 'Пока нет записей'}
+									: 'За выбранный период пока нет записей'}
 						</Text>
 						{!searchQuery.trim() ? (
 							<Pressable

@@ -103,7 +103,7 @@ export default function RemindersListScreen () {
 
 				{!loading && items.length === 0 ? (
 					<Text style={{ color: colors.textMuted, ...typography.body }}>
-						Пока нет напоминаний
+						Напоминания создаёте только вы — нажмите кнопку выше
 					</Text>
 				) : null}
 

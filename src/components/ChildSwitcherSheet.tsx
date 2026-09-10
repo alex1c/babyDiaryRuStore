@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
 		borderWidth: StyleSheet.hairlineWidth,
 		padding: spacing.md,
 		paddingBottom: spacing.xl,
-		maxHeight: '70%',
+		maxHeight: '55%',
 	},
 	title: {
 		...typography.subtitle,
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 	},
 	list: {
-		maxHeight: 320,
+		maxHeight: 240,
 	},
 	row: {
 		flexDirection: 'row',

@@ -15,6 +15,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { FormKeyboardShell } from '@/src/components/FormKeyboardShell'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import { toothLabel, TOOTH_SELECTOR_ORDER } from '@/src/domain/developmentLabels'
@@ -73,8 +74,15 @@ export default function ToothFormScreen () {
 			router.back()
 		} catch (err) {
 			logger.error('save tooth failed', err)
+			// Map repository English internals to Russian UI copy.
+			const raw = err instanceof Error ? err.message : ''
+			const russianByEnglish: Record<string, string> = {
+				'Failed to create tooth': 'Не удалось сохранить запись о зубе',
+				'Failed to update tooth': 'Не удалось сохранить запись о зубе',
+			}
 			setError(
-				err instanceof Error ? err.message : 'Не удалось сохранить',
+				russianByEnglish[raw] ??
+					(raw && /[А-Яа-яЁё]/.test(raw) ? raw : 'Не удалось сохранить'),
 			)
 			setBusy(false)
 		}
@@ -104,7 +112,12 @@ export default function ToothFormScreen () {
 			style={[styles.safe, { backgroundColor: colors.background }]}
 			edges={['bottom', 'left', 'right']}
 		>
-			<ScrollView contentContainerStyle={styles.content}>
+			{/* Keep Save reachable above the keyboard on form screens. */}
+			<FormKeyboardShell>
+			<ScrollView
+				contentContainerStyle={styles.content}
+				keyboardShouldPersistTaps="handled"
+			>
 				{!editId ? (
 					<>
 						<Text
@@ -193,6 +206,7 @@ export default function ToothFormScreen () {
 					</Pressable>
 				) : null}
 			</ScrollView>
+			</FormKeyboardShell>
 		</SafeAreaView>
 	)
 }

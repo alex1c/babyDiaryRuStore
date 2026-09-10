@@ -17,6 +17,7 @@ import { useFocusEffect, useRouter, type Href } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { ActiveBreastfeedingCard } from '@/src/components/ActiveBreastfeedingCard'
+import { FormKeyboardShell } from '@/src/components/FormKeyboardShell'
 import {
 	LightweightToast,
 	useLightweightToast,
@@ -171,8 +172,14 @@ export default function ActiveBreastfeedingScreen () {
 				</Pressable>
 			</View>
 
-			<Modal visible={noteOpen} transparent animationType="slide">
-				<View style={styles.modalBackdrop}>
+			<Modal
+				visible={noteOpen}
+				transparent
+				animationType="slide"
+				onRequestClose={() => setNoteOpen(false)}
+			>
+				{/* Avoid covering the note field / Save when the keyboard opens. */}
+				<FormKeyboardShell style={styles.modalBackdrop}>
 					<View
 						style={[
 							styles.modalCard,
@@ -197,13 +204,15 @@ export default function ActiveBreastfeedingScreen () {
 							onPress={() => void handleSaveNote()}
 							style={[styles.save, { backgroundColor: colors.primary }]}
 						>
-							<Text style={styles.saveText}>Сохранить</Text>
+							<Text style={[styles.saveText, { color: colors.onPrimary }]}>
+								Сохранить
+							</Text>
 						</Pressable>
 						<Pressable onPress={() => setNoteOpen(false)} style={styles.link}>
 							<Text style={{ color: colors.textMuted }}>Отмена</Text>
 						</Pressable>
 					</View>
-				</View>
+				</FormKeyboardShell>
 			</Modal>
 			<LightweightToast message={message} />
 		</SafeAreaView>
@@ -259,6 +268,5 @@ const styles = StyleSheet.create({
 	},
 	saveText: {
 		...typography.button,
-		color: '#FFFFFF',
 	},
 })

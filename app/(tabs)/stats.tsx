@@ -184,9 +184,14 @@ export default function StatsScreen () {
 						<HealthSection report={report} colors={colors} />
 					</>
 				) : (
-					<Text style={{ color: colors.textMuted, ...typography.body }}>
-						Недостаточно данных за этот период
-					</Text>
+					<View style={{ gap: spacing.xs }}>
+						<Text style={{ color: colors.textMuted, ...typography.body }}>
+							Недостаточно данных за этот период
+						</Text>
+						<Text style={{ color: colors.textMuted, ...typography.caption }}>
+							Добавьте сон, кормление или подгузник на экране «Сегодня»
+						</Text>
+					</View>
 				)}
 
 				<Link href={'/reports' as Href} asChild>

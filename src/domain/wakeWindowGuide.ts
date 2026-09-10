@@ -86,7 +86,7 @@ export function selectWakeWindowGuide (
 }
 
 export function formatWakeWindowGuideLabel (range: WakeWindowRange): string {
-	return `Ориентир ВБ для возраста: ${formatDurationMs(range.minMs)} – ${formatDurationMs(range.maxMs)}`
+	return `Ориентир бодрствования для возраста: ${formatDurationMs(range.minMs)} – ${formatDurationMs(range.maxMs)}`
 }
 
 export const WAKE_WINDOW_DISCLAIMER =

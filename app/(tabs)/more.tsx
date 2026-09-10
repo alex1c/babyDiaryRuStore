@@ -88,7 +88,7 @@ export default function MoreScreen () {
 				<MoreLink
 					href="/settings"
 					title="Настройки"
-					subtitle="Тема, уведомления, backup и другое"
+					subtitle="Тема, уведомления, резервная копия и другое"
 				/>
 				<MoreLink
 					href="/training"

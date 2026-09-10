@@ -1,5 +1,6 @@
 /**
  * Sleep status card for Today — start / finish / wake window.
+ * While sleeping, "Завершить сон" stays the dominant control.
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native'
@@ -27,21 +28,25 @@ export function SleepStatusCard ({
 		model.activeSleep?.startAt ?? null,
 		model.mode === 'sleeping',
 	)
+	const isSleeping = model.mode === 'sleeping'
 
-	const summary =
-		model.mode === 'sleeping' ? elapsed : model.statusSummary
+	const summary = isSleeping ? elapsed : model.statusSummary
 
 	return (
 		<View
 			style={[
 				styles.card,
-				{ backgroundColor: colors.surface, borderColor: colors.border },
+				{
+					backgroundColor: colors.surface,
+					borderColor: isSleeping ? colors.primary : colors.border,
+					borderWidth: isSleeping ? 2 : StyleSheet.hairlineWidth,
+				},
 			]}
 			accessibilityRole="summary"
 			accessibilityLabel={`${model.statusTitle}. ${summary}`}
 		>
 			<Text style={[styles.title, { color: colors.text }]}>
-				{model.mode === 'sleeping' ? 'Малыш спит' : model.statusTitle}
+				{isSleeping ? 'Малыш спит' : model.statusTitle}
 			</Text>
 			<Text
 				style={[
@@ -74,12 +79,14 @@ export function SleepStatusCard ({
 				</Text>
 			) : null}
 
-			<View style={styles.actions}>
+			{/* Finish sleep takes the full row so it cannot hide behind secondary CTAs. */}
+			<View style={[styles.actions, isSleeping && styles.actionsStacked]}>
 				<Pressable
 					onPress={onPrimary}
 					disabled={busy}
 					style={[
 						styles.primary,
+						isSleeping && styles.primaryDominant,
 						{
 							backgroundColor: busy
 								? colors.surfaceMuted
@@ -90,22 +97,43 @@ export function SleepStatusCard ({
 					accessibilityLabel={model.primaryCta}
 					accessibilityState={{ busy, disabled: busy }}
 				>
-					<Text style={styles.primaryText}>{model.primaryCta}</Text>
-				</Pressable>
-				<Pressable
-					onPress={onSecondary}
-					disabled={busy}
-					style={[
-						styles.secondary,
-						{ borderColor: colors.border, backgroundColor: colors.primarySoft },
-					]}
-					accessibilityRole="button"
-					accessibilityLabel={model.secondaryCta}
-				>
-					<Text style={[styles.secondaryText, { color: colors.primary }]}>
-						{model.secondaryCta}
+					<Text style={[styles.primaryText, { color: colors.onPrimary }]}>
+						{model.primaryCta}
 					</Text>
 				</Pressable>
+				{isSleeping ? (
+					<Pressable
+						onPress={onSecondary}
+						disabled={busy}
+						style={styles.secondaryLink}
+						accessibilityRole="button"
+						accessibilityLabel={model.secondaryCta}
+					>
+						<Text style={{ color: colors.textMuted, ...typography.body }}>
+							{model.secondaryCta}
+						</Text>
+					</Pressable>
+				) : (
+					<Pressable
+						onPress={onSecondary}
+						disabled={busy}
+						style={[
+							styles.secondary,
+							{
+								borderColor: colors.border,
+								backgroundColor: colors.primarySoft,
+							},
+						]}
+						accessibilityRole="button"
+						accessibilityLabel={model.secondaryCta}
+					>
+						<Text
+							style={[styles.secondaryText, { color: colors.primary }]}
+						>
+							{model.secondaryCta}
+						</Text>
+					</Pressable>
+				)}
 			</View>
 		</View>
 	)
@@ -113,7 +141,6 @@ export function SleepStatusCard ({
 
 const styles = StyleSheet.create({
 	card: {
-		borderWidth: StyleSheet.hairlineWidth,
 		borderRadius: radii.lg,
 		padding: spacing.md,
 		marginBottom: spacing.md,
@@ -149,6 +176,9 @@ const styles = StyleSheet.create({
 		gap: spacing.sm,
 		marginTop: spacing.xs,
 	},
+	actionsStacked: {
+		flexDirection: 'column',
+	},
 	primary: {
 		minHeight: 48,
 		paddingHorizontal: spacing.md,
@@ -157,9 +187,13 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		flexGrow: 1,
 	},
+	primaryDominant: {
+		minHeight: 56,
+		width: '100%',
+		borderRadius: radii.md,
+	},
 	primaryText: {
 		...typography.button,
-		color: '#FFFFFF',
 	},
 	secondary: {
 		minHeight: 48,
@@ -169,6 +203,11 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		borderWidth: StyleSheet.hairlineWidth,
 		flexGrow: 1,
+	},
+	secondaryLink: {
+		minHeight: 44,
+		alignItems: 'center',
+		justifyContent: 'center',
 	},
 	secondaryText: {
 		...typography.button,

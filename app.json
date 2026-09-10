@@ -13,6 +13,8 @@
     },
     "android": {
       "package": "com.calculatorplatform.babydiary",
+      "versionCode": 1,
+      "softwareKeyboardLayoutMode": "resize",
       "allowBackup": false,
       "adaptiveIcon": {
         "backgroundColor": "#FFF8F2",

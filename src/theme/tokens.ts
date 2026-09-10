@@ -19,6 +19,8 @@ export const lightColors = {
 	success: '#027A48',
 	tabInactive: '#9AA6A2',
 	adSlot: '#F0E8E0',
+	/** Text/icon on solid primary buttons. */
+	onPrimary: '#FFFFFF',
 } as const
 
 export const darkColors = {
@@ -37,6 +39,8 @@ export const darkColors = {
 	success: '#32D583',
 	tabInactive: '#7A8884',
 	adSlot: '#1E2623',
+	/** Text/icon on solid primary buttons. */
+	onPrimary: '#FFFFFF',
 } as const
 
 /** Shared semantic palette shape for light and dark schemes. */

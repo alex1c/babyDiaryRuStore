@@ -1,7 +1,7 @@
 /**
  * Database + repository bootstrap for the React tree.
- * Loading / error UI uses static light tokens so this provider can sit
- * under AppThemeProvider without circular init issues.
+ * Loading / error UI uses Appearance-based static tokens so this provider
+ * can sit under AppThemeProvider without circular init issues.
  */
 
 import {
@@ -12,7 +12,13 @@ import {
 	useState,
 	type ReactNode,
 } from 'react'
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
+import {
+	ActivityIndicator,
+	Appearance,
+	StyleSheet,
+	Text,
+	View,
+} from 'react-native'
 
 import { getDatabase } from '../db/client'
 import type { SqlExecutor } from '../db/types'
@@ -39,7 +45,12 @@ import {
 	getHealthDocumentStorage,
 } from '../services/appPhotoStorage'
 import { logger } from '../services/logger'
-import { lightColors, spacing, typography } from '../theme/tokens'
+import { darkColors, lightColors, spacing, typography } from '../theme/tokens'
+
+/** Resolve bootstrap colors from system appearance (no ThemeProvider yet). */
+function bootstrapColors () {
+	return Appearance.getColorScheme() === 'dark' ? darkColors : lightColors
+}
 
 interface DatabaseContextValue {
 	ready: boolean
@@ -219,10 +230,13 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 	}
 
 	if (error) {
+		const colors = bootstrapColors()
 		return (
-			<View style={styles.center}>
-				<Text style={styles.errorTitle}>Не удалось открыть базу</Text>
-				<Text style={styles.errorBody}>
+			<View style={[styles.center, { backgroundColor: colors.background }]}>
+				<Text style={[styles.errorTitle, { color: colors.danger }]}>
+					Не удалось открыть базу
+				</Text>
+				<Text style={[styles.errorBody, { color: colors.textMuted }]}>
 					{__DEV__ ? error : 'Попробуйте перезапустить приложение.'}
 				</Text>
 			</View>
@@ -230,10 +244,13 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 	}
 
 	if (!ready) {
+		const colors = bootstrapColors()
 		return (
-			<View style={styles.center}>
-				<ActivityIndicator size="large" color={lightColors.primary} />
-				<Text style={styles.loading}>Загрузка дневника…</Text>
+			<View style={[styles.center, { backgroundColor: colors.background }]}>
+				<ActivityIndicator size="large" color={colors.primary} />
+				<Text style={[styles.loading, { color: colors.textMuted }]}>
+					Загрузка дневника…
+				</Text>
 			</View>
 		)
 	}
@@ -259,22 +276,18 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 		paddingHorizontal: spacing.lg,
-		backgroundColor: lightColors.background,
 	},
 	loading: {
 		marginTop: spacing.sm,
 		...typography.body,
-		color: lightColors.textMuted,
 	},
 	errorTitle: {
 		...typography.subtitle,
 		marginBottom: spacing.sm,
 		textAlign: 'center',
-		color: lightColors.danger,
 	},
 	errorBody: {
 		...typography.body,
 		textAlign: 'center',
-		color: lightColors.textMuted,
 	},
 })

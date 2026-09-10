@@ -16,6 +16,7 @@ import { useFocusEffect } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { ChoiceButton } from '@/src/components/FeedingControls'
+import { FormKeyboardShell } from '@/src/components/FormKeyboardShell'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import {
@@ -97,7 +98,12 @@ export default function CustomEventTypeScreen () {
 			style={[styles.safe, { backgroundColor: colors.background }]}
 			edges={['bottom', 'left', 'right']}
 		>
-			<ScrollView contentContainerStyle={styles.content}>
+			{/* Keep Save reachable above the keyboard on form screens. */}
+			<FormKeyboardShell>
+			<ScrollView
+				contentContainerStyle={styles.content}
+				keyboardShouldPersistTaps="handled"
+			>
 				{mode === 'list' ? (
 					<>
 						<ChoiceButton label="Новый тип" onPress={() => setMode('new')} />
@@ -205,6 +211,7 @@ export default function CustomEventTypeScreen () {
 					</>
 				)}
 			</ScrollView>
+			</FormKeyboardShell>
 		</SafeAreaView>
 	)
 }

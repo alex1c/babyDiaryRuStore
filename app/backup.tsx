@@ -321,7 +321,9 @@ export default function BackupScreen () {
 						Полная · с фотографиями
 					</Text>
 					<Text style={[styles.hint, { color: '#FFFFFFCC' }]}>
-						Данные и используемые снимки / документы
+						{mediaEstimate != null && mediaEstimate > 0
+							? `Данные, фото и документы · около ${formatBytes(mediaEstimate)} — файл может быть большим`
+							: 'Данные, фото и документы — файл может быть большим из‑за медиа'}
 					</Text>
 				</Pressable>
 
@@ -346,10 +348,10 @@ export default function BackupScreen () {
 						},
 					]}
 					accessibilityRole="button"
-					accessibilityLabel="Выбрать файл резервной копии"
+					accessibilityLabel="Выбрать файл копии"
 				>
 					<Text style={[styles.btnTitle, { color: colors.text }]}>
-						Выбрать ZIP-файл
+						Выбрать файл копии
 					</Text>
 				</Pressable>
 
@@ -473,7 +475,7 @@ export default function BackupScreen () {
 					<Text
 						style={[styles.hint, { color: colors.textSecondary }]}
 					>
-						Пока не создавалась
+						Создайте копию, чтобы перенести дневник на другой телефон
 					</Text>
 				)}
 

@@ -1,5 +1,5 @@
 /**
- * Today — sleep + feeding tracking; diaper remains a later phase.
+ * Today — sleep, feeding, diaper and one-handed quick actions.
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -53,6 +53,7 @@ import {
 	buildTodaySleepModel,
 	type TodaySleepModel,
 } from '@/src/presentation/todaySleepModel'
+import { hiddenQuickActionIds } from '@/src/presentation/quickActionVisibility'
 import { loadSmartTodayHint } from '@/src/presentation/loadSmartToday'
 import { logger } from '@/src/services/logger'
 import { useAppTheme } from '@/src/theme/ThemeProvider'
@@ -355,6 +356,9 @@ export default function TodayScreen () {
 		return (
 			<View style={[styles.center, { backgroundColor: colors.background }]}>
 				<ActivityIndicator size="large" color={colors.primary} />
+				<Text style={[styles.empty, { color: colors.textMuted }]}>
+					Загрузка…
+				</Text>
 			</View>
 		)
 	}
@@ -394,6 +398,12 @@ export default function TodayScreen () {
 		...diaperModel.summaryRows,
 	]
 
+	// Hide quick actions that duplicate an active session's primary CTA.
+	const hiddenQuickIds = hiddenQuickActionIds({
+		isSleeping: sleepModel.mode === 'sleeping',
+		hasActiveBreastfeeding: Boolean(feedingModel.activeBreastfeeding),
+	})
+
 	return (
 		<SafeAreaView
 			style={[styles.safe, { backgroundColor: colors.background }]}
@@ -407,29 +417,6 @@ export default function TodayScreen () {
 					child={activeChild}
 					onPress={() => setSwitcherOpen(true)}
 				/>
-
-				{smartHint ? <SmartTodayCard hint={smartHint} /> : null}
-
-				{nextReminder ? (
-					<Pressable
-						onPress={() => router.push('/reminders' as Href)}
-						style={styles.nextReminder}
-					>
-						<Text style={{ color: colors.textMuted, ...typography.caption }}>
-							Следующее
-						</Text>
-						<Text style={{ color: colors.text, ...typography.body }}>
-							{nextReminder.title} ·{' '}
-							{nextReminder.timeLocal ??
-								reminderScheduleLabel(nextReminder)}
-						</Text>
-					</Pressable>
-				) : null}
-
-				<Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-					Быстрые действия
-				</Text>
-				<QuickActions onAction={handleQuickAction} />
 
 				<SleepStatusCard
 					model={sleepModel}
@@ -502,7 +489,33 @@ export default function TodayScreen () {
 						accessibilityLabel="Изменить последний подгузник"
 					>
 						<Text style={{ color: colors.primary }}>
-							Подробности подгузника
+							Изменить запись
+						</Text>
+					</Pressable>
+				) : null}
+
+				<Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+					Быстрые действия
+				</Text>
+				<QuickActions
+					onAction={handleQuickAction}
+					hiddenIds={hiddenQuickIds}
+				/>
+
+				{smartHint ? <SmartTodayCard hint={smartHint} /> : null}
+
+				{nextReminder ? (
+					<Pressable
+						onPress={() => router.push('/reminders' as Href)}
+						style={styles.nextReminder}
+					>
+						<Text style={{ color: colors.textMuted, ...typography.caption }}>
+							Следующее
+						</Text>
+						<Text style={{ color: colors.text, ...typography.body }}>
+							{nextReminder.title} ·{' '}
+							{nextReminder.timeLocal ??
+								reminderScheduleLabel(nextReminder)}
 						</Text>
 					</Pressable>
 				) : null}

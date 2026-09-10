@@ -15,6 +15,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { FormKeyboardShell } from '@/src/components/FormKeyboardShell'
 import { ManagedImage } from '@/src/components/ManagedImage'
 import { LightweightToast, useLightweightToast } from '@/src/components/LightweightToast'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
@@ -161,7 +162,12 @@ export default function HealthSymptomScreen () {
 			style={[styles.safe, { backgroundColor: colors.background }]}
 			edges={['bottom', 'left', 'right']}
 		>
-			<ScrollView contentContainerStyle={styles.content}>
+			{/* Keep Save reachable above the keyboard on form screens. */}
+			<FormKeyboardShell>
+			<ScrollView
+				contentContainerStyle={styles.content}
+				keyboardShouldPersistTaps="handled"
+			>
 				<Text style={[styles.label, { color: colors.textSecondary }]}>
 					Тип
 				</Text>
@@ -291,6 +297,7 @@ export default function HealthSymptomScreen () {
 					</Pressable>
 				) : null}
 			</ScrollView>
+			</FormKeyboardShell>
 			<LightweightToast message={message} />
 		</SafeAreaView>
 	)

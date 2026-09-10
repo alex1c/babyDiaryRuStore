@@ -16,6 +16,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { FormKeyboardShell } from '@/src/components/FormKeyboardShell'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import {
@@ -205,7 +206,12 @@ export default function ReminderEditScreen () {
 			style={[styles.safe, { backgroundColor: colors.background }]}
 			edges={['left', 'right']}
 		>
-			<ScrollView contentContainerStyle={styles.content}>
+			{/* Keep Save reachable above the keyboard on form screens. */}
+			<FormKeyboardShell>
+			<ScrollView
+				contentContainerStyle={styles.content}
+				keyboardShouldPersistTaps="handled"
+			>
 				<Text style={[styles.label, { color: colors.textMuted }]}>Тип</Text>
 				<View style={styles.chips}>
 					{REMINDER_TYPES.map((t) => (
@@ -458,6 +464,7 @@ export default function ReminderEditScreen () {
 					</Pressable>
 				) : null}
 			</ScrollView>
+			</FormKeyboardShell>
 		</SafeAreaView>
 	)
 }

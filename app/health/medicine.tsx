@@ -15,6 +15,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { FormKeyboardShell } from '@/src/components/FormKeyboardShell'
 import { LightweightToast, useLightweightToast } from '@/src/components/LightweightToast'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
@@ -165,7 +166,12 @@ export default function HealthMedicineScreen () {
 			style={[styles.safe, { backgroundColor: colors.background }]}
 			edges={['bottom', 'left', 'right']}
 		>
-			<ScrollView contentContainerStyle={styles.content}>
+			{/* Keep Save reachable above the keyboard on form screens. */}
+			<FormKeyboardShell>
+			<ScrollView
+				contentContainerStyle={styles.content}
+				keyboardShouldPersistTaps="handled"
+			>
 				<View style={styles.chips}>
 					{(['medicine', 'vitamin'] as MedicineKind[]).map((k) => (
 						<Pressable
@@ -311,6 +317,7 @@ export default function HealthMedicineScreen () {
 					</Pressable>
 				)}
 			</ScrollView>
+			</FormKeyboardShell>
 			<LightweightToast message={message} />
 		</SafeAreaView>
 	)

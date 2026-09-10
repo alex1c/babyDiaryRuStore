@@ -1,5 +1,6 @@
 /**
  * Primary one-handed quick actions for Today.
+ * Hide redundant actions while a live sleep/BF session owns the primary CTA.
  */
 
 import { Pressable, StyleSheet, Text, View } from 'react-native'
@@ -11,6 +12,8 @@ export type QuickActionId = 'sleep' | 'feeding' | 'diaper' | 'more'
 
 interface QuickActionsProps {
 	onAction: (id: QuickActionId) => void
+	/** Actions hidden while active session cards already show the control. */
+	hiddenIds?: QuickActionId[]
 }
 
 const ACTIONS: { id: QuickActionId; label: string }[] = [
@@ -20,12 +23,16 @@ const ACTIONS: { id: QuickActionId; label: string }[] = [
 	{ id: 'more', label: 'Ещё' },
 ]
 
-export function QuickActions ({ onAction }: QuickActionsProps) {
+export function QuickActions ({
+	onAction,
+	hiddenIds = [],
+}: QuickActionsProps) {
 	const { colors } = useAppTheme()
+	const visible = ACTIONS.filter((action) => !hiddenIds.includes(action.id))
 
 	return (
 		<View style={styles.grid} accessibilityRole="toolbar">
-			{ACTIONS.map((action) => (
+			{visible.map((action) => (
 				<Pressable
 					key={action.id}
 					onPress={() => onAction(action.id)}
@@ -35,6 +42,7 @@ export function QuickActions ({ onAction }: QuickActionsProps) {
 							backgroundColor:
 								action.id === 'more' ? colors.surface : colors.primary,
 							borderColor: colors.border,
+							width: visible.length <= 2 ? '100%' : '47%',
 						},
 					]}
 					accessibilityRole="button"
@@ -45,12 +53,10 @@ export function QuickActions ({ onAction }: QuickActionsProps) {
 							styles.label,
 							{
 								color:
-									action.id === 'more' ? colors.text : '#FFFFFF',
+									action.id === 'more' ? colors.text : colors.onPrimary,
 							},
 						]}
 						numberOfLines={2}
-						adjustsFontSizeToFit
-						minimumFontScale={0.85}
 					>
 						{action.label}
 					</Text>
@@ -69,7 +75,6 @@ const styles = StyleSheet.create({
 		marginBottom: spacing.lg,
 	},
 	button: {
-		width: '47%',
 		minHeight: 64,
 		borderRadius: radii.md,
 		borderWidth: StyleSheet.hairlineWidth,

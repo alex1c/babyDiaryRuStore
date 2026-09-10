@@ -110,6 +110,3 @@ export function buildTodayViewModel (
 		],
 	}
 }
-
-/** User-facing copy for Phase 1 placeholder actions (no system Alert). */
-export const PHASE1_COMING_SOON = 'Будет доступно на следующем этапе'

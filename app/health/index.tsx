@@ -110,7 +110,7 @@ export default function HealthScreen () {
 								Последняя температура
 							</Text>
 							<Text style={[styles.cardValue, { color: colors.text }]}>
-								{lastTemp ?? 'Пока нет записей'}
+								{lastTemp ?? 'Добавьте первую запись ниже'}
 							</Text>
 						</View>
 						<View
@@ -128,7 +128,7 @@ export default function HealthScreen () {
 								Активные симптомы
 							</Text>
 							<Text style={[styles.cardValue, { color: colors.text }]}>
-								{activeCount}
+								{activeCount === 0 ? 'Нет активных симптомов' : activeCount}
 							</Text>
 							{activeLines.map((line) => (
 								<Text
@@ -154,7 +154,7 @@ export default function HealthScreen () {
 								Последнее лекарство
 							</Text>
 							<Text style={[styles.cardValue, { color: colors.text }]}>
-								{lastMed ?? 'Пока нет записей'}
+								{lastMed ?? 'Добавьте первую запись ниже'}
 							</Text>
 						</View>
 					</>

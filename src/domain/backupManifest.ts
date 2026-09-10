@@ -48,6 +48,7 @@ export function isBackupFormatSupported (version: number): boolean {
 
 /**
  * Parse and validate a manifest object from backup ZIP.
+ * User-facing messages stay Russian and avoid internal field names.
  */
 export function validateBackupManifest (
 	raw: unknown,
@@ -56,14 +57,14 @@ export function validateBackupManifest (
 		return {
 			ok: false,
 			code: 'missing_manifest',
-			message: 'В архиве нет manifest.json',
+			message: 'В архиве нет описания копии',
 		}
 	}
 	if (typeof raw !== 'object') {
 		return {
 			ok: false,
 			code: 'invalid_manifest',
-			message: 'Некорректный manifest.json',
+			message: 'Некорректное описание копии',
 		}
 	}
 	const obj = raw as Record<string, unknown>
@@ -72,7 +73,7 @@ export function validateBackupManifest (
 		return {
 			ok: false,
 			code: 'invalid_manifest',
-			message: 'В manifest отсутствует backupFormatVersion',
+			message: 'В описании копии нет версии формата',
 		}
 	}
 	if (formatVersion > BACKUP_FORMAT_VERSION) {
@@ -104,7 +105,7 @@ export function validateBackupManifest (
 		return {
 			ok: false,
 			code: 'invalid_manifest',
-			message: 'Некорректная databaseSchemaVersion',
+			message: 'Некорректная версия базы в копии',
 		}
 	}
 
@@ -113,14 +114,14 @@ export function validateBackupManifest (
 		return {
 			ok: false,
 			code: 'invalid_manifest',
-			message: 'Некорректный childrenCount',
+			message: 'Некорректное число детей в копии',
 		}
 	}
 
 	const appVersion =
 		typeof obj.appVersion === 'string' && obj.appVersion.trim()
 			? obj.appVersion.trim()
-			: 'unknown'
+			: 'неизвестно'
 	const createdAt =
 		typeof obj.createdAt === 'string' && obj.createdAt.trim()
 			? obj.createdAt.trim()
@@ -129,14 +130,14 @@ export function validateBackupManifest (
 		return {
 			ok: false,
 			code: 'invalid_manifest',
-			message: 'В manifest отсутствует createdAt',
+			message: 'В описании копии нет даты создания',
 		}
 	}
 
 	const platform =
 		typeof obj.platform === 'string' && obj.platform.trim()
 			? obj.platform.trim()
-			: 'unknown'
+			: 'неизвестно'
 
 	if (obj.databaseEncoding != null && obj.databaseEncoding !== 'json-tables') {
 		return {
@@ -177,7 +178,7 @@ export function parseManifestJson (text: string): ManifestValidationResult {
 		return {
 			ok: false,
 			code: 'invalid_json',
-			message: 'Не удалось прочитать manifest.json',
+			message: 'Не удалось прочитать описание копии',
 		}
 	}
 }

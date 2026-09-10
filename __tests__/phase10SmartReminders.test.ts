@@ -105,7 +105,7 @@ describe('smart today', () => {
 			asOfDate: '2026-09-09',
 		})
 		expect(hint?.kind).toBe('wake_age_guide')
-		expect(hint?.body).toContain('Ориентир ВБ')
+		expect(hint?.body).toContain('Ориентир бодрствования')
 		expect(hint?.confidence).toBe('low')
 	})
 

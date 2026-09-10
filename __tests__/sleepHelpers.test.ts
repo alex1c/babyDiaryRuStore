@@ -104,7 +104,7 @@ describe('wake window guide', () => {
 	it('selects a range by age in days', () => {
 		const guide = selectWakeWindowGuide('2026-09-01', '2026-09-09')
 		expect(guide).not.toBeNull()
-		expect(formatWakeWindowGuideLabel(guide!)).toMatch(/Ориентир ВБ/)
+		expect(formatWakeWindowGuideLabel(guide!)).toMatch(/Ориентир бодрствования/)
 	})
 })
 

@@ -52,7 +52,7 @@ export function ActiveBreastfeedingCard ({
 		<View
 			style={[
 				styles.card,
-				{ backgroundColor: colors.surface, borderColor: colors.border },
+				{ backgroundColor: colors.surface, borderColor: colors.primary },
 			]}
 			accessibilityRole="summary"
 			accessibilityLabel={`Кормление. ${breastSideLabel(event.lastSide)}. ${clock}`}
@@ -68,6 +68,7 @@ export function ActiveBreastfeedingCard ({
 				Правая {formatDurationMs(totals.rightSeconds * 1000)}
 			</Text>
 
+			{/* Finish is the primary action; side switch stays large but secondary. */}
 			<View style={styles.actions}>
 				<Pressable
 					onPress={() => onSwitchSide(otherSide)}
@@ -100,7 +101,9 @@ export function ActiveBreastfeedingCard ({
 					accessibilityRole="button"
 					accessibilityLabel="Завершить кормление"
 				>
-					<Text style={styles.primaryText}>Завершить</Text>
+					<Text style={[styles.primaryText, { color: colors.onPrimary }]}>
+						Завершить
+					</Text>
 				</Pressable>
 			</View>
 			<Pressable
@@ -118,7 +121,7 @@ export function ActiveBreastfeedingCard ({
 
 const styles = StyleSheet.create({
 	card: {
-		borderWidth: StyleSheet.hairlineWidth,
+		borderWidth: 2,
 		borderRadius: radii.lg,
 		padding: spacing.md,
 		marginBottom: spacing.md,
@@ -146,19 +149,18 @@ const styles = StyleSheet.create({
 		gap: spacing.sm,
 	},
 	primary: {
-		flex: 1,
-		minHeight: 52,
+		flex: 1.4,
+		minHeight: 56,
 		borderRadius: radii.md,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
 	primaryText: {
 		...typography.button,
-		color: '#FFFFFF',
 	},
 	secondary: {
 		flex: 1,
-		minHeight: 52,
+		minHeight: 56,
 		borderRadius: radii.md,
 		borderWidth: StyleSheet.hairlineWidth,
 		alignItems: 'center',
