@@ -52,6 +52,11 @@ export default function MoreScreen () {
 		>
 			<ScrollView contentContainerStyle={styles.content}>
 				<MoreLink
+					href={'/reminders' as Href}
+					title="Напоминания"
+					subtitle="Локальные уведомления — только то, что включите сами"
+				/>
+				<MoreLink
 					href={'/reports' as Href}
 					title="Отчёты и экспорт"
 					subtitle="Сводка, PDF за период и первый год"

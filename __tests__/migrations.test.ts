@@ -12,10 +12,10 @@ import { LATEST_SCHEMA_VERSION, MIGRATIONS } from '../src/db/migrations'
 describe('migrations', () => {
 	it('exposes a monotonic schema version sequence', () => {
 		expect(MIGRATIONS.length).toBeGreaterThan(0)
-		expect(LATEST_SCHEMA_VERSION).toBe(7)
-		expect(getExpectedSchemaVersion()).toBe(7)
+		expect(LATEST_SCHEMA_VERSION).toBe(8)
+		expect(getExpectedSchemaVersion()).toBe(8)
 		expect(MIGRATIONS.map((m) => m.version)).toEqual([
-			1, 2, 3, 4, 5, 6, 7,
+			1, 2, 3, 4, 5, 6, 7, 8,
 		])
 
 		const v7 = MIGRATIONS[6]?.sql ?? ''
@@ -23,6 +23,10 @@ describe('migrations', () => {
 		expect(v7).toContain('event_symptom')
 		expect(v7).toContain('doctor_visits')
 		expect(v7).toContain('health_attachments')
+
+		const v8 = MIGRATIONS[7]?.sql ?? ''
+		expect(v8).toContain('CREATE TABLE reminders')
+		expect(v8).toContain('platform_notification_id')
 	})
 
 	it('is a no-op when already at latest version', async () => {
@@ -48,24 +52,25 @@ describe('migrations', () => {
 			'5:diary_query_indexes',
 			'6:growth_milestones_moments',
 			'7:health_tracking',
+			'8:reminders',
 		])
-		expect(db.getTable('schema_migrations')).toHaveLength(7)
+		expect(db.getTable('schema_migrations')).toHaveLength(8)
 	})
 
-	it('upgrades from v6 to v7', async () => {
+	it('upgrades from v7 to v8', async () => {
 		const db = new MemorySqlExecutor()
-		db.markMigrated(6)
+		db.markMigrated(7)
 		const result = await migrateDatabase(db)
-		expect(result.fromVersion).toBe(6)
-		expect(result.toVersion).toBe(7)
-		expect(result.applied).toEqual(['7:health_tracking'])
+		expect(result.fromVersion).toBe(7)
+		expect(result.toVersion).toBe(8)
+		expect(result.applied).toEqual(['8:reminders'])
 	})
 
-	it('repeated migrate at v7 is idempotent', async () => {
+	it('repeated migrate at v8 is idempotent', async () => {
 		const db = new MemorySqlExecutor()
 		await migrateDatabase(db)
 		const again = await migrateDatabase(db)
 		expect(again.applied).toEqual([])
-		expect(again.toVersion).toBe(7)
+		expect(again.toVersion).toBe(8)
 	})
 })

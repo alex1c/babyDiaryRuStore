@@ -35,7 +35,7 @@ export default function ActiveBreastfeedingScreen () {
 	const { colors } = useAppTheme()
 	const router = useRouter()
 	const { activeChild } = useActiveChild()
-	const { feeding } = useDatabase()
+	const { feeding, reminderService } = useDatabase()
 	const { message, showToast } = useLightweightToast()
 	const [event, setEvent] = useState<BreastfeedingEvent | null>(null)
 	const [loading, setLoading] = useState(true)
@@ -100,6 +100,9 @@ export default function ActiveBreastfeedingScreen () {
 			showToast(
 				`Кормление ${formatDurationMs(totals.totalSeconds * 1000)} сохранено`,
 			)
+			if (reminderService && activeChild) {
+				await reminderService.rescheduleNoFeedingForChild(activeChild.id)
+			}
 			router.replace('/(tabs)' as Href)
 		} catch (err) {
 			logger.error('finish breastfeeding failed', err)

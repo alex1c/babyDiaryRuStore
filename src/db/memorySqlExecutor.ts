@@ -30,6 +30,7 @@ const TABLE_NAMES = [
 	'event_symptom',
 	'doctor_visits',
 	'health_attachments',
+	'reminders',
 	'app_settings',
 	'schema_migrations',
 ] as const
@@ -445,6 +446,52 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return { changes: 1, lastInsertRowId: 0 }
 		}
 
+		if (/^UPDATE reminders SET platform_notification_id = \?, updated_at = \? WHERE id = \?$/i.test(normalized)) {
+			const [platformId, updatedAt, id] = params
+			const row = this.tables.reminders.find((r) => r.id === id)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			row.platform_notification_id = platformId as string | null
+			row.updated_at = updatedAt as string
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
+		if (/^UPDATE reminders SET/i.test(normalized)) {
+			const id = params[params.length - 1]
+			const row = this.tables.reminders.find((r) => r.id === id)
+			if (!row) {
+				return { changes: 0, lastInsertRowId: 0 }
+			}
+			const [
+				title,
+				enabled,
+				scheduleType,
+				timeLocal,
+				daysOfWeek,
+				fireAt,
+				intervalHours,
+				relatedEntityId,
+				platformNotificationId,
+				notes,
+				doseText,
+				updatedAt,
+			] = params
+			row.title = title as string
+			row.enabled = enabled as number
+			row.schedule_type = scheduleType as string
+			row.time_local = timeLocal as string | null
+			row.days_of_week = daysOfWeek as string | null
+			row.fire_at = fireAt as string | null
+			row.interval_hours = intervalHours as number | null
+			row.related_entity_id = relatedEntityId as string | null
+			row.platform_notification_id = platformNotificationId as string | null
+			row.notes = notes as string | null
+			row.dose_text = doseText as string | null
+			row.updated_at = updatedAt as string
+			return { changes: 1, lastInsertRowId: 0 }
+		}
+
 		if (/^UPDATE growth_measurements SET/i.test(normalized)) {
 			const id = params[params.length - 1]
 			const row = this.tables.growth_measurements.find((r) => r.id === id)
@@ -691,6 +738,11 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return (rows[0] as T) ?? null
 		}
 
+		if (/FROM reminders/i.test(normalized)) {
+			const rows = this.queryReminders(normalized, params)
+			return (rows[0] as T) ?? null
+		}
+
 		if (/FROM health_attachments/i.test(normalized)) {
 			const rows = this.queryHealthAttachments(normalized, params)
 			return (rows[0] as T) ?? null
@@ -816,6 +868,10 @@ export class MemorySqlExecutor implements SqlExecutor {
 
 		if (/FROM doctor_visits/i.test(normalized)) {
 			return this.queryDoctorVisits(normalized, params) as T[]
+		}
+
+		if (/FROM reminders/i.test(normalized)) {
+			return this.queryReminders(normalized, params) as T[]
 		}
 
 		if (/FROM health_attachments/i.test(normalized)) {
@@ -1554,7 +1610,8 @@ export class MemorySqlExecutor implements SqlExecutor {
 		if (table === 'events' || table === 'recent_foods' || table === 'custom_event_definitions'
 			|| table === 'growth_measurements' || table === 'teeth' || table === 'moments'
 			|| table === 'month_photos' || table === 'medicine_catalog'
-			|| table === 'doctor_visits' || table === 'health_attachments') {
+			|| table === 'doctor_visits' || table === 'health_attachments'
+			|| table === 'reminders') {
 			if (row.child_id != null) {
 				const child = this.tables.children.find((c) => c.id === row.child_id)
 				if (!child) {
@@ -1638,6 +1695,9 @@ export class MemorySqlExecutor implements SqlExecutor {
 			(row) => row.child_id !== childId,
 		)
 		this.tables.health_attachments = this.tables.health_attachments.filter(
+			(row) => row.child_id !== childId,
+		)
+		this.tables.reminders = this.tables.reminders.filter(
 			(row) => row.child_id !== childId,
 		)
 	}
@@ -1740,6 +1800,35 @@ export class MemorySqlExecutor implements SqlExecutor {
 				rows = rows.slice(0, limit)
 			}
 		}
+		return rows
+	}
+
+	private queryReminders (sql: string, params: SqlParam[]): Row[] {
+		let rows = [...this.tables.reminders]
+		if (/WHERE id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.id === params[0])
+		} else if (/child_id = \? AND enabled = 1\s+AND type = 'no_feeding'/i.test(sql)) {
+			rows = rows.filter(
+				(r) =>
+					r.child_id === params[0] &&
+					r.enabled === 1 &&
+					r.type === 'no_feeding',
+			)
+		} else if (/child_id = \? AND enabled = 1/i.test(sql)) {
+			rows = rows.filter((r) => r.child_id === params[0] && r.enabled === 1)
+		} else if (/WHERE enabled = 1/i.test(sql)) {
+			rows = rows.filter((r) => r.enabled === 1)
+		} else if (/child_id = \?/i.test(sql)) {
+			rows = rows.filter((r) => r.child_id === params[0])
+		}
+		rows.sort((a, b) => {
+			const ae = Number(a.enabled)
+			const be = Number(b.enabled)
+			if (ae !== be) {
+				return be - ae
+			}
+			return String(a.title).localeCompare(String(b.title), 'ru')
+		})
 		return rows
 	}
 

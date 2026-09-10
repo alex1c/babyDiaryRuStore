@@ -35,7 +35,7 @@ export default function BottleFeedingScreen () {
 	const { colors } = useAppTheme()
 	const router = useRouter()
 	const { activeChild } = useActiveChild()
-	const { feeding } = useDatabase()
+	const { feeding, reminderService } = useDatabase()
 	const { message, showToast } = useLightweightToast()
 	const [content, setContent] = useState<BottleContent | null>(null)
 	const [amount, setAmount] = useState<number | null>(120)
@@ -70,6 +70,9 @@ export default function BottleFeedingScreen () {
 				amountMl: ml,
 				notes: notes.trim() || null,
 			})
+			if (reminderService) {
+				await reminderService.rescheduleNoFeedingForChild(activeChild.id)
+			}
 			showToast(
 				`${content === 'formula' ? 'Смесь' : 'Сцеженное молоко'} ${ml} мл сохранено`,
 			)

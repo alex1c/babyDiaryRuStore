@@ -27,13 +27,17 @@ import {
 } from '@/src/components/MoreActionsSheet'
 import { QuickActions, type QuickActionId } from '@/src/components/QuickActions'
 import { SleepStatusCard } from '@/src/components/SleepStatusCard'
+import { SmartTodayCard } from '@/src/components/SmartTodayCard'
 import { StatusCard } from '@/src/components/StatusCard'
 import { TodaySummary } from '@/src/components/TodaySummary'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
 import { breastfeedingLiveTotals } from '@/src/domain/breastfeedingDuration'
 import { FeedingValidationError } from '@/src/domain/feedingLabels'
+import { reminderScheduleLabel } from '@/src/domain/reminderLabels'
 import { SleepValidationError } from '@/src/domain/sleepValidation'
+import type { SmartTodayHint } from '@/src/domain/smartToday'
+import type { Reminder } from '@/src/models/reminder'
 import type { BreastSide } from '@/src/models/feeding'
 import {
 	buildTodayDiaperModel,
@@ -47,6 +51,7 @@ import {
 	buildTodaySleepModel,
 	type TodaySleepModel,
 } from '@/src/presentation/todaySleepModel'
+import { loadSmartTodayHint } from '@/src/presentation/loadSmartToday'
 import { logger } from '@/src/services/logger'
 import { useAppTheme } from '@/src/theme/ThemeProvider'
 import { formatDurationMs, durationBetweenMs } from '@/src/utils/durationFormat'
@@ -57,7 +62,8 @@ export default function TodayScreen () {
 	const { colors } = useAppTheme()
 	const router = useRouter()
 	const { activeChild, loading: childLoading } = useActiveChild()
-	const { sleep, feeding, diaper, quickEvents } = useDatabase()
+	const { sleep, feeding, diaper, quickEvents, reminders, reminderService } =
+		useDatabase()
 	const { message, showToast } = useLightweightToast()
 
 	const [sleepModel, setSleepModel] = useState<TodaySleepModel | null>(null)
@@ -65,6 +71,8 @@ export default function TodayScreen () {
 		null,
 	)
 	const [diaperModel, setDiaperModel] = useState<TodayDiaperModel | null>(null)
+	const [smartHint, setSmartHint] = useState<SmartTodayHint | null>(null)
+	const [nextReminder, setNextReminder] = useState<Reminder | null>(null)
 	const [customDefs, setCustomDefs] = useState<{ id: string; name: string }[]>(
 		[],
 	)
@@ -77,6 +85,8 @@ export default function TodayScreen () {
 			setSleepModel(null)
 			setFeedingModel(null)
 			setDiaperModel(null)
+			setSmartHint(null)
+			setNextReminder(null)
 			setLoading(false)
 			return
 		}
@@ -128,13 +138,42 @@ export default function TodayScreen () {
 				activeChild.id,
 			)
 			setCustomDefs(defs.map((d) => ({ id: d.id, name: d.name })))
+
+			const hint = await loadSmartTodayHint(
+				{ sleep, feeding },
+				activeChild,
+				Date.now(),
+			)
+			setSmartHint(hint)
+
+			if (reminders) {
+				const enabled = await reminders.listEnabledByChild(activeChild.id)
+				const withTime = enabled
+					.filter((r) => r.timeLocal || r.fireAt)
+					.sort((a, b) =>
+						(a.timeLocal ?? a.fireAt ?? '').localeCompare(
+							b.timeLocal ?? b.fireAt ?? '',
+						),
+					)
+				setNextReminder(withTime[0] ?? null)
+			} else {
+				setNextReminder(null)
+			}
 		} catch (error) {
 			logger.error('Failed to refresh Today', error)
 			showToast('Не удалось обновить данные')
 		} finally {
 			setLoading(false)
 		}
-	}, [sleep, feeding, diaper, quickEvents, activeChild, showToast])
+	}, [
+		sleep,
+		feeding,
+		diaper,
+		quickEvents,
+		reminders,
+		activeChild,
+		showToast,
+	])
 
 	useFocusEffect(
 		useCallback(() => {
@@ -255,6 +294,9 @@ export default function TodayScreen () {
 			showToast(
 				`Кормление ${formatDurationMs(totals.totalSeconds * 1000)} сохранено`,
 			)
+			if (reminderService && activeChild) {
+				await reminderService.rescheduleNoFeedingForChild(activeChild.id)
+			}
 			await refresh()
 		} catch (error) {
 			logger.error('finish breastfeeding on Today failed', error)
@@ -362,6 +404,24 @@ export default function TodayScreen () {
 						{sleepModel.ageLabel}
 					</Text>
 				</View>
+
+				{smartHint ? <SmartTodayCard hint={smartHint} /> : null}
+
+				{nextReminder ? (
+					<Pressable
+						onPress={() => router.push('/reminders' as Href)}
+						style={styles.nextReminder}
+					>
+						<Text style={{ color: colors.textMuted, ...typography.caption }}>
+							Следующее
+						</Text>
+						<Text style={{ color: colors.text, ...typography.body }}>
+							{nextReminder.title} ·{' '}
+							{nextReminder.timeLocal ??
+								reminderScheduleLabel(nextReminder)}
+						</Text>
+					</Pressable>
+				) : null}
 
 				<Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
 					Быстрые действия
@@ -500,5 +560,9 @@ const styles = StyleSheet.create({
 		minHeight: 44,
 		marginBottom: spacing.md,
 		justifyContent: 'center',
+	},
+	nextReminder: {
+		marginBottom: spacing.md,
+		gap: 2,
 	},
 })

@@ -2,7 +2,7 @@
  * Settings — theme + links to profile and future sections.
  */
 
-import { Link } from 'expo-router'
+import { Link, type Href } from 'expo-router'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 import { useDatabase } from '@/src/context/DatabaseContext'
@@ -17,10 +17,9 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 ]
 
 const PLACEHOLDER_SECTIONS = [
-	{ title: 'Уведомления', hint: 'Напоминания — позже' },
 	{ title: 'Резервная копия', hint: 'Экспорт данных — позже' },
 	{ title: 'Конфиденциальность', hint: 'Локальное хранение на устройстве' },
-	{ title: 'О приложении', hint: 'Дневник малыша · Phase 1' },
+	{ title: 'О приложении', hint: 'Дневник малыша' },
 ] as const
 
 export default function SettingsScreen () {
@@ -86,6 +85,24 @@ export default function SettingsScreen () {
 					</Text>
 					<Text style={[styles.cardHint, { color: colors.textSecondary }]}>
 						Имя, дата рождения, вес и рост
+					</Text>
+				</Pressable>
+			</Link>
+
+			<Link href={'/reminders' as Href} asChild>
+				<Pressable
+					style={[
+						styles.card,
+						{ backgroundColor: colors.surface, borderColor: colors.border },
+					]}
+					accessibilityRole="button"
+					accessibilityLabel="Напоминания"
+				>
+					<Text style={[styles.cardTitle, { color: colors.text }]}>
+						Напоминания
+					</Text>
+					<Text style={[styles.cardHint, { color: colors.textSecondary }]}>
+						Локальные уведомления
 					</Text>
 				</Pressable>
 			</Link>

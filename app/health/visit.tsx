@@ -2,7 +2,7 @@
  * Doctor visit create / edit + optional photo attachment.
  */
 
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
 	Alert,
@@ -244,6 +244,29 @@ export default function HealthVisitScreen () {
 					onChangeText={setNextVisit}
 					colors={colors}
 				/>
+				{nextVisit.trim() ? (
+					<Pressable
+						onPress={() => {
+							const fireAt = toOffsetDateTime(
+								new Date(`${nextVisit.trim()}T12:00:00`),
+							)
+							router.push({
+								pathname: '/reminders/edit',
+								params: {
+									type: 'doctor',
+									title: doctorSpecialistLabel(key),
+									fireAt,
+									relatedEntityId: editId ?? '',
+								},
+							} as Href)
+						}}
+						style={[styles.secondary, { borderColor: colors.border }]}
+					>
+						<Text style={{ color: colors.primary }}>
+							Добавить напоминание
+						</Text>
+					</Pressable>
+				) : null}
 				{attachments.map((a) => (
 					<ManagedImage
 						key={a.id}

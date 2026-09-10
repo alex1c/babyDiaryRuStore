@@ -32,6 +32,8 @@ import { SettingsRepository } from '../repositories/settingsRepository'
 import { SleepRepository } from '../repositories/sleepRepository'
 import { SymptomRepository } from '../repositories/symptomRepository'
 import { ToothRepository } from '../repositories/toothRepository'
+import { ReminderRepository } from '../repositories/reminderRepository'
+import { ReminderService } from '../services/reminderService'
 import {
 	getAppPhotoStorage,
 	getHealthDocumentStorage,
@@ -57,6 +59,8 @@ interface DatabaseContextValue {
 	medicineCatalog: MedicineCatalogRepository | null
 	doctorVisits: DoctorVisitRepository | null
 	healthAttachments: HealthAttachmentRepository | null
+	reminders: ReminderRepository | null
+	reminderService: ReminderService | null
 	settings: SettingsRepository | null
 	themePreference: ThemePreference
 	setThemePreferenceState: (preference: ThemePreference) => void
@@ -88,16 +92,20 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 				medicineCatalog: null,
 				doctorVisits: null,
 				healthAttachments: null,
+				reminders: null,
+				reminderService: null,
 				settings: null,
 			}
 		}
 		const photos = getAppPhotoStorage()
 		const healthDocs = getHealthDocumentStorage()
+		const reminders = new ReminderRepository(db)
+		const feeding = new FeedingRepository(db)
 		return {
 			childrenRepo: new ChildRepository(db),
 			events: new EventRepository(db),
 			sleep: new SleepRepository(db),
-			feeding: new FeedingRepository(db),
+			feeding,
 			diaper: new DiaperRepository(db),
 			quickEvents: new QuickEventRepository(db),
 			growth: new GrowthRepository(db),
@@ -108,6 +116,8 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 			medicineCatalog: new MedicineCatalogRepository(db),
 			doctorVisits: new DoctorVisitRepository(db),
 			healthAttachments: new HealthAttachmentRepository(db, healthDocs),
+			reminders,
+			reminderService: new ReminderService({ reminders, feeding }),
 			settings: new SettingsRepository(db),
 		}
 	}, [db])
@@ -141,6 +151,18 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 		}
 	}, [])
 
+	// One-shot reconciliation after repos are ready (not on every render).
+	useEffect(() => {
+		if (!ready || !repos.reminderService) {
+			return
+		}
+		void repos.reminderService.reconcile().catch((err) => {
+			logger.warn('reminder reconcile failed', {
+				error: err instanceof Error ? err.message : String(err),
+			})
+		})
+	}, [ready, repos.reminderService])
+
 	const value: DatabaseContextValue = {
 		ready,
 		error,
@@ -159,6 +181,8 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 		medicineCatalog: repos.medicineCatalog,
 		doctorVisits: repos.doctorVisits,
 		healthAttachments: repos.healthAttachments,
+		reminders: repos.reminders,
+		reminderService: repos.reminderService,
 		settings: repos.settings,
 		themePreference,
 		setThemePreferenceState,

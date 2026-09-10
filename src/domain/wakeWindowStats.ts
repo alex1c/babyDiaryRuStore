@@ -16,14 +16,13 @@ export interface WakeWindowStats {
 }
 
 /**
- * Average ВБ from end of finished sleep → start of next sleep.
- * Active (open-ended) sleeps are ignored as interval endpoints.
- * Does not invent wake time before the first sleep of the day.
+ * Collect valid wake gaps (finished sleep end → next sleep start).
+ * Shared by statistics and Smart Today outlier filtering.
  */
-export function computeAverageWakeWindow (
+export function collectValidWakeIntervals (
 	sleeps: readonly SleepEvent[],
 	maxGapMs: number = MAX_WAKE_WINDOW_MS,
-): WakeWindowStats {
+): number[] {
 	const finished = sleeps
 		.filter((s) => s.endAt != null)
 		.map((s) => ({
@@ -37,7 +36,6 @@ export function computeAverageWakeWindow (
 	for (let i = 0; i < finished.length - 1; i += 1) {
 		const prev = finished[i]!
 		const next = finished[i + 1]!
-		// Next sleep must start after previous ended.
 		const gap = next.startMs - prev.endMs
 		if (gap <= 0) {
 			continue
@@ -47,7 +45,19 @@ export function computeAverageWakeWindow (
 		}
 		intervalsMs.push(gap)
 	}
+	return intervalsMs
+}
 
+/**
+ * Average ВБ from end of finished sleep → start of next sleep.
+ * Active (open-ended) sleeps are ignored as interval endpoints.
+ * Does not invent wake time before the first sleep of the day.
+ */
+export function computeAverageWakeWindow (
+	sleeps: readonly SleepEvent[],
+	maxGapMs: number = MAX_WAKE_WINDOW_MS,
+): WakeWindowStats {
+	const intervalsMs = collectValidWakeIntervals(sleeps, maxGapMs)
 	if (intervalsMs.length === 0) {
 		return { averageMs: null, sampleCount: 0, intervalsMs: [] }
 	}
@@ -57,4 +67,20 @@ export function computeAverageWakeWindow (
 		sampleCount: intervalsMs.length,
 		intervalsMs,
 	}
+}
+
+/** Inclusive percentile from a sorted copy (p in 0..1). */
+export function percentileMs (
+	values: readonly number[],
+	p: number,
+): number | null {
+	if (values.length === 0) {
+		return null
+	}
+	const sorted = [...values].sort((a, b) => a - b)
+	const idx = Math.min(
+		sorted.length - 1,
+		Math.max(0, Math.round(p * (sorted.length - 1))),
+	)
+	return sorted[idx] ?? null
 }

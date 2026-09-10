@@ -46,7 +46,15 @@
           "cameraPermission": "Приложению нужна камера, чтобы снимать моменты малыша."
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#3D7A6A",
+          "defaultChannel": "baby-diary"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

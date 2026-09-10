@@ -167,6 +167,14 @@ function RootNavigator () {
 					options={{ title: 'Обучение', presentation: 'card' }}
 				/>
 				<Stack.Screen
+					name="reminders/index"
+					options={{ title: 'Напоминания', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="reminders/edit"
+					options={{ title: 'Напоминание', presentation: 'card' }}
+				/>
+				<Stack.Screen
 					name="reports/index"
 					options={{ title: 'Отчёты и экспорт', presentation: 'card' }}
 				/>

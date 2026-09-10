@@ -388,6 +388,37 @@ CREATE INDEX idx_health_attachments_child
 	ON health_attachments(child_id);
 `,
 	},
+	{
+		version: 8,
+		name: 'reminders',
+		sql: `
+-- User-managed local reminders (Phase 10). All disabled unless user creates them.
+CREATE TABLE reminders (
+	id TEXT PRIMARY KEY NOT NULL,
+	child_id TEXT NOT NULL,
+	type TEXT NOT NULL,
+	title TEXT NOT NULL,
+	enabled INTEGER NOT NULL DEFAULT 1,
+	schedule_type TEXT NOT NULL,
+	time_local TEXT,
+	days_of_week TEXT,
+	fire_at TEXT,
+	interval_hours REAL,
+	related_entity_id TEXT,
+	platform_notification_id TEXT,
+	notes TEXT,
+	dose_text TEXT,
+	created_at TEXT NOT NULL,
+	updated_at TEXT NOT NULL,
+	FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_reminders_child
+	ON reminders(child_id, enabled);
+CREATE INDEX idx_reminders_type
+	ON reminders(child_id, type);
+`,
+	},
 ]
 
 export const LATEST_SCHEMA_VERSION =
