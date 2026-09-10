@@ -12,7 +12,7 @@
 | Package | `com.calculatorplatform.babydiary` |
 | Version | `1.0.0` |
 | VersionCode | `1` |
-| Final Git SHA | _(filled after commit)_ |
+| Final Git SHA | `a61ace05558300e9b2853e8fe73653bb46bef0ca` |
 
 ## Icon
 
