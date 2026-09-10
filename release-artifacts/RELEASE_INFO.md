@@ -1,18 +1,18 @@
-﻿# Release info вЂ” Р“РЅС‘Р·РґС‹С€РєРѕ вЂ” РґРЅРµРІРЅРёРє РјР°Р»С‹С€Р°
+# Release info — Гнёздышко — дневник малыша
 
 ## STATUS
 
-`READY FOR RUSTORE UPLOAD`
+`READY FOR RUSTORE RE-UPLOAD`
 
 ## App identity
 
 | Field | Value |
 | --- | --- |
-| Display name | Р“РЅС‘Р·РґС‹С€РєРѕ вЂ” РґРЅРµРІРЅРёРє РјР°Р»С‹С€Р° |
+| Display name | Гнёздышко — дневник малыша |
 | Package | `com.calculatorplatform.babydiary` |
 | Version | `1.0.0` |
 | VersionCode | `1` |
-| Final Git SHA | `244f6cfb41052fc36901f0179ba544e5c44dd7a0` |
+| Final Git SHA | _(filled after commit)_ |
 
 ## Icon
 
@@ -20,22 +20,22 @@
 | --- | --- |
 | Master | `assets/icon_gpt.png` |
 | App / adaptive derivatives | `assets/images/icon.png` + Android mipmaps |
-| RuStore 512Г—512 | `release-artifacts/icon-512.png` |
+| RuStore 512×512 | `release-artifacts/icon-512.png` |
 
-## Screenshots (RuStore, 1080Г—1920)
+## Screenshots (RuStore, 1080×1920)
 
-Captured on AVD `ForestMusic_Fast_API35`, cropped/resized to exactly `1080Г—1920`.
+Captured on AVD `ForestMusic_Fast_API35`, cropped/resized to exactly `1080×1920`.
 
 | # | File | Screen |
 | --- | --- | --- |
-| 01 | `release-artifacts/screenshots/01-today.png` | РЎРµРіРѕРґРЅСЏ |
-| 02 | `release-artifacts/screenshots/02-diary.png` | Р”РЅРµРІРЅРёРє |
-| 03 | `release-artifacts/screenshots/03-statistics.png` | РЎС‚Р°С‚РёСЃС‚РёРєР° |
-| 04 | `release-artifacts/screenshots/04-development.png` | Р Р°Р·РІРёС‚РёРµ |
-| 05 | `release-artifacts/screenshots/05-health.png` | Р—РґРѕСЂРѕРІСЊРµ |
-| 06 | `release-artifacts/screenshots/06-reports.png` | РћС‚С‡С‘С‚С‹ Рё СЌРєСЃРїРѕСЂС‚ |
-| 07 | `release-artifacts/screenshots/07-moments.png` | Р”РѕСЃС‚РёР¶РµРЅРёСЏ / РјРѕРјРµРЅС‚С‹ |
-| 08 | `release-artifacts/screenshots/08-more.png` | Р•С‰С‘ |
+| 01 | `release-artifacts/screenshots/01-today.png` | Сегодня |
+| 02 | `release-artifacts/screenshots/02-diary.png` | Дневник |
+| 03 | `release-artifacts/screenshots/03-statistics.png` | Статистика |
+| 04 | `release-artifacts/screenshots/04-development.png` | Развитие |
+| 05 | `release-artifacts/screenshots/05-health.png` | Здоровье |
+| 06 | `release-artifacts/screenshots/06-reports.png` | Отчёты и экспорт |
+| 07 | `release-artifacts/screenshots/07-moments.png` | Достижения / моменты |
+| 08 | `release-artifacts/screenshots/08-more.png` | Ещё |
 
 ## Yandex Mobile Ads (unchanged)
 
@@ -77,8 +77,8 @@ See `release-artifacts/RUSTORE_LISTING_RU.md`.
 | --- | --- |
 | Keystore (local, outside repo) | `D:\secure\android-signing\babyDiaryRuStore\babydiary-release.jks` |
 | Alias | `babydiary` |
-| Store password source | `D:\secure\android-signing\babyDiaryRuStore\keystore-password.txt` в†’ `signing.properties` |
-| Key password source | `D:\secure\android-signing\babyDiaryRuStore\key-password.txt` в†’ `signing.properties` |
+| Store password source | `D:\secure\android-signing\babyDiaryRuStore\keystore-password.txt` → `signing.properties` |
+| Key password source | `D:\secure\android-signing\babyDiaryRuStore\key-password.txt` → `signing.properties` |
 | Certificate SHA1 | `7C:0E:33:72:FD:C1:7C:98:82:32:1C:48:BB:61:16:00:6F:77:08:52` |
 | Certificate SHA256 | `67:76:C9:BB:44:BE:DC:84:3E:7F:73:0E:11:DE:55:0A:7F:F1:99:B0:96:CD:9E:A2:BF:61:35:C3:21:1A:B5:B0` |
 | Signing verified on AAB | **YES** (production key) |
@@ -89,6 +89,49 @@ See `release-artifacts/RUSTORE_LISTING_RU.md`.
 | --- | --- |
 | Gradle output | `android/app/build/outputs/bundle/release/app-release.aab` |
 | Release artifact | `release-artifacts/app-release.aab` |
-| File size | `77911858` bytes (~74.3 MiB) |
-| AAB SHA256 | `51B7A7A35A35B709F7139A71CBF7260785A5A9F6628339EC6CE679C78942A3A6` |
+| File size | `77911818` bytes |
+| AAB SHA256 | `FF5EEF48D5EC741E019ED40DC314E7315FA6203DB5337EA416E5013835CD7726` |
 | Production signed | **YES** |
+
+## Android permissions (release merged / AAB)
+
+Removed for RuStore (not required by product):
+
+- `RECORD_AUDIO` — was from `expo-image-picker` (video mic); blocked via `microphonePermission: false` + `blockedPermissions`
+- `SYSTEM_ALERT_WINDOW` — Expo/RN debug overlay template; blocked via `blockedPermissions`
+- `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` — legacy maxSdk 32 from `expo-image-picker` / `expo-file-system`; app uses Photo Picker / SAF / app-private storage; blocked via `blockedPermissions`
+
+Kept (needed):
+
+- `CAMERA` — `expo-image-picker` (photos of baby moments)
+- `POST_NOTIFICATIONS` — `expo-notifications` (reminders)
+
+Full merged release `uses-permission` list:
+
+- `android.permission.ACCESS_NETWORK_STATE`
+- `android.permission.CAMERA`
+- `android.permission.INTERNET`
+- `android.permission.POST_NOTIFICATIONS`
+- `android.permission.READ_APP_BADGE`
+- `android.permission.RECEIVE_BOOT_COMPLETED`
+- `android.permission.VIBRATE`
+- `android.permission.WAKE_LOCK`
+- `com.anddoes.launcher.permission.UPDATE_COUNT`
+- `com.calculatorplatform.babydiary.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`
+- `com.google.android.c2dm.permission.RECEIVE`
+- `com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE`
+- `com.google.android.gms.permission.AD_ID`
+- `com.htc.launcher.permission.READ_SETTINGS`
+- `com.htc.launcher.permission.UPDATE_SHORTCUT`
+- `com.huawei.android.launcher.permission.CHANGE_BADGE`
+- `com.huawei.android.launcher.permission.READ_SETTINGS`
+- `com.huawei.android.launcher.permission.WRITE_SETTINGS`
+- `com.majeur.launcher.permission.UPDATE_BADGE`
+- `com.oppo.launcher.permission.READ_SETTINGS`
+- `com.oppo.launcher.permission.WRITE_SETTINGS`
+- `com.sec.android.provider.badge.permission.READ`
+- `com.sec.android.provider.badge.permission.WRITE`
+- `com.sonyericsson.home.permission.BROADCAST_BADGE`
+- `com.sonymobile.home.permission.PROVIDER_INSERT_BADGE`
+- `me.everything.badger.permission.BADGE_COUNT_READ`
+- `me.everything.badger.permission.BADGE_COUNT_WRITE`
