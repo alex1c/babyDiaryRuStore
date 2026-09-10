@@ -132,4 +132,8 @@ export interface AppSettings {
 	themePreference: ThemePreference
 	activeChildId: string | null
 	onboardingCompleted: boolean
+	/** User finished or skipped the in-app training tour. */
+	trainingCompleted: boolean
+	/** Soft post-onboarding training offer was dismissed with «Позже». */
+	trainingOfferDismissed: boolean
 }

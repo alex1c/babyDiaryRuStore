@@ -1,5 +1,5 @@
 /**
- * App settings repository (theme, active child, onboarding flag).
+ * App settings repository (theme, active child, onboarding, training flags).
  */
 
 import type { SqlExecutor } from '../db/types'
@@ -8,11 +8,15 @@ import type { AppSettings, ThemePreference } from '../models/types'
 const KEY_THEME = 'themePreference'
 const KEY_ACTIVE_CHILD = 'activeChildId'
 const KEY_ONBOARDING = 'onboardingCompleted'
+const KEY_TRAINING_COMPLETED = 'trainingCompleted'
+const KEY_TRAINING_OFFER_DISMISSED = 'trainingOfferDismissed'
 
 const DEFAULTS: AppSettings = {
 	themePreference: 'system',
 	activeChildId: null,
 	onboardingCompleted: false,
+	trainingCompleted: false,
+	trainingOfferDismissed: false,
 }
 
 function parseTheme (value: string | null | undefined): ThemePreference {
@@ -35,6 +39,9 @@ export class SettingsRepository {
 			themePreference: parseTheme(map.get(KEY_THEME)),
 			activeChildId: activeRaw && activeRaw.length > 0 ? activeRaw : null,
 			onboardingCompleted: map.get(KEY_ONBOARDING) === '1',
+			trainingCompleted: map.get(KEY_TRAINING_COMPLETED) === '1',
+			trainingOfferDismissed:
+				map.get(KEY_TRAINING_OFFER_DISMISSED) === '1',
 		}
 	}
 
@@ -55,6 +62,26 @@ export class SettingsRepository {
 
 	async setOnboardingCompleted (done: boolean): Promise<void> {
 		await this.upsert(KEY_ONBOARDING, done ? '1' : '0')
+	}
+
+	async setTrainingCompleted (done: boolean): Promise<void> {
+		await this.upsert(KEY_TRAINING_COMPLETED, done ? '1' : '0')
+	}
+
+	async setTrainingOfferDismissed (dismissed: boolean): Promise<void> {
+		await this.upsert(KEY_TRAINING_OFFER_DISMISSED, dismissed ? '1' : '0')
+	}
+
+	/**
+	 * Soft offer should appear only once after first-child onboarding,
+	 * and never again after dismiss / complete / skip.
+	 */
+	async shouldShowTrainingOffer (): Promise<boolean> {
+		const settings = await this.get()
+		if (settings.trainingCompleted || settings.trainingOfferDismissed) {
+			return false
+		}
+		return settings.onboardingCompleted
 	}
 
 	private async upsert (key: string, value: string): Promise<void> {

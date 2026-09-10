@@ -40,7 +40,13 @@ export default function OnboardingScreen () {
 			await settings.setOnboardingCompleted(true)
 			await setActiveChildId(child.id)
 			await refresh()
-			router.replace('/(tabs)' as Href)
+			// Soft training offer once — never blocks the app permanently.
+			const showOffer = await settings.shouldShowTrainingOffer()
+			if (showOffer) {
+				router.replace('/training?from=onboarding' as Href)
+			} else {
+				router.replace('/(tabs)' as Href)
+			}
 		} catch (error) {
 			logger.error('Failed to create child during onboarding', error)
 			throw new Error(

@@ -119,6 +119,24 @@ export default function SettingsScreen () {
 				</Pressable>
 			</Link>
 
+			<Link href={'/training' as Href} asChild>
+				<Pressable
+					style={[
+						styles.card,
+						{ backgroundColor: colors.surface, borderColor: colors.border },
+					]}
+					accessibilityRole="button"
+					accessibilityLabel="Обучение"
+				>
+					<Text style={[styles.cardTitle, { color: colors.text }]}>
+						Обучение
+					</Text>
+					<Text style={[styles.cardHint, { color: colors.textSecondary }]}>
+						Как пользоваться дневником
+					</Text>
+				</Pressable>
+			</Link>
+
 			<View
 				style={[
 					styles.card,
