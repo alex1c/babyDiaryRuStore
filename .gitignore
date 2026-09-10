@@ -44,8 +44,11 @@ credentials/*
 keystore.properties
 **/keystore.properties
 
-# release artifacts (never commit signed binaries)
-release-artifacts/
+# release artifacts — ignore signed binaries; keep store icon assets tracked
+release-artifacts/*
+!release-artifacts/.gitkeep
+!release-artifacts/icon-512.png
+!release-artifacts/ICON_NOTES.md
 
 # typescript
 *.tsbuildinfo
