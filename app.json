@@ -32,6 +32,7 @@
       "expo-router",
       "expo-sqlite",
       "./plugins/withYandexMobileAds",
+      "./plugins/withProductionSigning",
       [
         "expo-splash-screen",
         {

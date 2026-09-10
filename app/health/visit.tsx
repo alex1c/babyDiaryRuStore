@@ -256,6 +256,7 @@ export default function HealthVisitScreen () {
 							const fireAt = toOffsetDateTime(
 								new Date(`${nextVisit.trim()}T12:00:00`),
 							)
+							// Cast via unknown: typed routes lag behind new reminder screens.
 							router.push({
 								pathname: '/reminders/edit',
 								params: {
@@ -264,7 +265,7 @@ export default function HealthVisitScreen () {
 									fireAt,
 									relatedEntityId: editId ?? '',
 								},
-							} as Href)
+							} as unknown as Href)
 						}}
 						style={[styles.secondary, { borderColor: colors.border }]}
 					>

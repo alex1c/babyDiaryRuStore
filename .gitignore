@@ -43,6 +43,11 @@ credentials/*
 !credentials/.gitkeep
 keystore.properties
 **/keystore.properties
+signing.properties
+**/signing.properties
+*-password.txt
+*password*.txt
+**/android-signing/**
 
 # release artifacts — ignore signed binaries; keep store assets tracked
 release-artifacts/*

@@ -139,6 +139,7 @@ export default function PdfReportScreen () {
 				report_kind: 'period',
 			})
 
+			// Cast via unknown: typed routes lag behind the PDF ready screen.
 			router.push({
 				pathname: '/reports/ready',
 				params: {
@@ -146,7 +147,7 @@ export default function PdfReportScreen () {
 					fileName: result.fileName,
 					fresh: result.isFreshGeneration ? '1' : '0',
 				},
-			} as Href)
+			} as unknown as Href)
 		} catch (err) {
 			logger.error('pdf generation failed', err)
 			setError(
