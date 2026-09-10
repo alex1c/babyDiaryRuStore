@@ -2,8 +2,8 @@
  * Edit the active child's profile (does not create a new child).
  */
 
-import { useRouter } from 'expo-router'
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
+import { Link, useRouter, type Href } from 'expo-router'
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { ChildProfileForm } from '@/src/components/ChildProfileForm'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
@@ -57,6 +57,7 @@ export default function ProfileScreen () {
 				sex: result.parsed.sex,
 				birthWeightGrams: result.parsed.birthWeightGrams,
 				birthHeightCm: result.parsed.birthHeightCm,
+				photoUri: result.parsed.photoUri,
 			})
 			await refresh()
 			router.back()
@@ -69,16 +70,30 @@ export default function ProfileScreen () {
 	}
 
 	return (
-		<ChildProfileForm
-			key={activeChild.id}
-			initial={activeChild}
-			submitLabel="Сохранить"
-			onSubmit={handleSubmit}
-		/>
+		<View style={[styles.flex, { backgroundColor: colors.background }]}>
+			<Link href={'/children' as Href} asChild>
+				<Pressable
+					style={styles.childrenLink}
+					accessibilityRole="button"
+					accessibilityLabel="Мои дети"
+				>
+					<Text style={{ color: colors.primary, fontWeight: '600' }}>
+						Мои дети ›
+					</Text>
+				</Pressable>
+			</Link>
+			<ChildProfileForm
+				key={activeChild.id}
+				initial={activeChild}
+				submitLabel="Сохранить"
+				onSubmit={handleSubmit}
+			/>
+		</View>
 	)
 }
 
 const styles = StyleSheet.create({
+	flex: { flex: 1 },
 	center: {
 		flex: 1,
 		alignItems: 'center',
@@ -88,5 +103,11 @@ const styles = StyleSheet.create({
 	empty: {
 		...typography.body,
 		textAlign: 'center',
+	},
+	childrenLink: {
+		paddingHorizontal: spacing.md,
+		paddingTop: spacing.sm,
+		minHeight: 40,
+		justifyContent: 'center',
 	},
 })

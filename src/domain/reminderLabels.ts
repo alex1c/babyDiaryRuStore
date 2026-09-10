@@ -88,10 +88,28 @@ function formatFireAtShort (fireAt: string): string {
 	return fireAt
 }
 
+/** Neutral notification title — include child name when known. */
+export function buildReminderNotificationTitle (
+	reminder: Reminder,
+	childName: string | null = null,
+): string {
+	if (childName && childName.trim()) {
+		return `${childName.trim()} · ${reminder.title}`
+	}
+	return reminder.title
+}
+
 /** Neutral notification body — never a medical order. */
-export function buildReminderNotificationBody (reminder: Reminder): string {
+export function buildReminderNotificationBody (
+	reminder: Reminder,
+	childName: string | null = null,
+): string {
 	if (reminder.type === 'no_feeding' && reminder.intervalHours != null) {
-		return `Последнее кормление было ${formatHoursRu(reminder.intervalHours)} назад`
+		const base = `Последнее кормление было ${formatHoursRu(reminder.intervalHours)} назад`
+		if (childName && childName.trim()) {
+			return `${childName.trim()} · ${base}`
+		}
+		return base
 	}
 	if (reminder.doseText) {
 		return `${reminder.title} · ${reminder.doseText} (напоминание, установленное вами)`

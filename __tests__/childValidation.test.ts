@@ -42,6 +42,7 @@ describe('child form validation', () => {
 				sex: null,
 				weightKgText: '',
 				heightCmText: '',
+				photoUri: null,
 			},
 			'2026-09-09',
 		)
@@ -71,6 +72,7 @@ describe('child form validation', () => {
 				sex: 'female',
 				weightKgText: '3,450',
 				heightCmText: '51',
+				photoUri: null,
 			},
 			'2026-09-09',
 		)

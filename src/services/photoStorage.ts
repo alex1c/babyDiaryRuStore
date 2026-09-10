@@ -36,6 +36,8 @@ export interface PhotoStorageDeps {
 
 export const MOMENTS_SUBDIR = 'moments/'
 export const HEALTH_DOCS_SUBDIR = 'health-documents/'
+/** Per-child profile avatars under documentDirectory/profile-photos/. */
+export const PROFILE_PHOTOS_SUBDIR = 'profile-photos/'
 
 /**
  * Create filesystem-backed storage under documentDirectory/<subdir>/.

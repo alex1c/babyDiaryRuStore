@@ -2,7 +2,7 @@
  * Shared child profile form for onboarding create and profile edit.
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import {
 	KeyboardAvoidingView,
 	Platform,
@@ -20,9 +20,17 @@ import {
 	type ChildFormValues,
 	validateChildForm,
 } from '../domain/childValidation'
+import { getProfilePhotoStorage } from '../services/appPhotoStorage'
+import {
+	photoPermissionDeniedMessage,
+	pickImageFromLibrary,
+	takePhotoWithCamera,
+} from '../services/photoPicker'
+import { logger } from '../services/logger'
 import { formatKgForInput } from '../utils/decimalParse'
 import { useAppTheme } from '../theme/ThemeProvider'
 import { radii, spacing, typography } from '../theme/tokens'
+import { ChildAvatar } from './ChildAvatar'
 import { DateOnlyPickerField } from './DateOnlyPickerField'
 import { TimePickerField } from './TimePickerField'
 
@@ -36,6 +44,8 @@ export interface ChildProfileFormProps {
 	initial?: Child | null
 	submitLabel: string
 	onSubmit: (values: ChildFormValues) => Promise<void>
+	/** Optional content after the submit button (e.g. delete profile). */
+	footer?: ReactNode
 }
 
 function childToFormValues (child: Child | null | undefined): ChildFormValues {
@@ -47,6 +57,7 @@ function childToFormValues (child: Child | null | undefined): ChildFormValues {
 			sex: null,
 			weightKgText: '',
 			heightCmText: '',
+			photoUri: null,
 		}
 	}
 	return {
@@ -60,6 +71,7 @@ function childToFormValues (child: Child | null | undefined): ChildFormValues {
 				: '',
 		heightCmText:
 			child.birthHeightCm != null ? String(child.birthHeightCm) : '',
+		photoUri: child.photoUri,
 	}
 }
 
@@ -67,6 +79,7 @@ export function ChildProfileForm ({
 	initial,
 	submitLabel,
 	onSubmit,
+	footer,
 }: ChildProfileFormProps) {
 	const { colors } = useAppTheme()
 	const [values, setValues] = useState<ChildFormValues>(() =>
@@ -81,6 +94,51 @@ export function ChildProfileForm ({
 
 	const patch = (partial: Partial<ChildFormValues>): void => {
 		setValues((prev) => ({ ...prev, ...partial }))
+	}
+
+	const importPicked = async (sourceUri: string): Promise<void> => {
+		const managed = await getProfilePhotoStorage().importFromUri(sourceUri)
+		patch({ photoUri: managed })
+	}
+
+	const handleGallery = async (): Promise<void> => {
+		const picked = await pickImageFromLibrary()
+		if (!picked.ok) {
+			if (picked.reason === 'denied') {
+				setErrors([photoPermissionDeniedMessage()])
+			}
+			return
+		}
+		try {
+			await importPicked(picked.uri)
+			setErrors([])
+		} catch (err) {
+			logger.error('profile photo gallery import failed', err)
+			setErrors(['Не удалось сохранить фото'])
+		}
+	}
+
+	const handleCamera = async (): Promise<void> => {
+		const picked = await takePhotoWithCamera()
+		if (!picked.ok) {
+			if (picked.reason === 'denied') {
+				setErrors([photoPermissionDeniedMessage()])
+			} else if (picked.reason === 'unavailable') {
+				setErrors(['Камера сейчас недоступна — выберите фото из галереи'])
+			}
+			return
+		}
+		try {
+			await importPicked(picked.uri)
+			setErrors([])
+		} catch (err) {
+			logger.error('profile photo camera import failed', err)
+			setErrors(['Не удалось сохранить фото'])
+		}
+	}
+
+	const handleRemovePhoto = (): void => {
+		patch({ photoUri: null })
 	}
 
 	const handleSubmit = async (): Promise<void> => {
@@ -104,6 +162,8 @@ export function ChildProfileForm ({
 		}
 	}
 
+	const previewName = values.name.trim() || 'Малыш'
+
 	return (
 		<KeyboardAvoidingView
 			style={styles.flex}
@@ -114,6 +174,62 @@ export function ChildProfileForm ({
 				contentContainerStyle={styles.content}
 				keyboardShouldPersistTaps="handled"
 			>
+				<Text style={[styles.label, { color: colors.textSecondary }]}>
+					Фото
+				</Text>
+				<View style={styles.photoRow}>
+					<ChildAvatar
+						name={previewName}
+						photoUri={values.photoUri}
+						size={72}
+					/>
+					<View style={styles.photoActions}>
+						<Pressable
+							onPress={() => {
+								void handleGallery()
+							}}
+							style={[
+								styles.photoBtn,
+								{
+									backgroundColor: colors.primarySoft,
+									borderColor: colors.border,
+								},
+							]}
+							accessibilityRole="button"
+							accessibilityLabel="Выбрать фото из галереи"
+						>
+							<Text style={{ color: colors.primary, fontWeight: '600' }}>
+								Галерея
+							</Text>
+						</Pressable>
+						<Pressable
+							onPress={() => {
+								void handleCamera()
+							}}
+							style={[
+								styles.photoBtn,
+								{
+									backgroundColor: colors.surface,
+									borderColor: colors.border,
+								},
+							]}
+							accessibilityRole="button"
+							accessibilityLabel="Сделать фото"
+						>
+							<Text style={{ color: colors.text }}>Камера</Text>
+						</Pressable>
+						{values.photoUri ? (
+							<Pressable
+								onPress={handleRemovePhoto}
+								accessibilityRole="button"
+								accessibilityLabel="Убрать фото"
+							>
+								<Text style={{ color: colors.danger }}>Убрать</Text>
+							</Pressable>
+						) : null}
+					</View>
+				</View>
+
 				<Text style={[styles.label, { color: colors.textSecondary }]}>Имя</Text>
 				<TextInput
 					value={values.name}
@@ -263,6 +379,8 @@ export function ChildProfileForm ({
 						{busy ? 'Сохраняем…' : submitLabel}
 					</Text>
 				</Pressable>
+
+				{footer}
 			</ScrollView>
 		</KeyboardAvoidingView>
 	)
@@ -277,6 +395,24 @@ const styles = StyleSheet.create({
 	label: {
 		...typography.caption,
 		marginBottom: spacing.xs,
+	},
+	photoRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: spacing.md,
+		marginBottom: spacing.md,
+	},
+	photoActions: {
+		flex: 1,
+		gap: spacing.sm,
+	},
+	photoBtn: {
+		minHeight: 40,
+		paddingHorizontal: spacing.md,
+		borderRadius: radii.sm,
+		borderWidth: StyleSheet.hairlineWidth,
+		alignItems: 'center',
+		justifyContent: 'center',
 	},
 	input: {
 		minHeight: 48,

@@ -670,6 +670,19 @@ export class MemorySqlExecutor implements SqlExecutor {
 			return { changes, lastInsertRowId: 0 }
 		}
 
+		if (/^DELETE FROM custom_event_definitions WHERE child_id = \?$/i.test(normalized)) {
+			const childId = params[0]
+			const before = this.tables.custom_event_definitions.length
+			this.tables.custom_event_definitions =
+				this.tables.custom_event_definitions.filter(
+					(r) => r.child_id !== childId,
+				)
+			return {
+				changes: before - this.tables.custom_event_definitions.length,
+				lastInsertRowId: 0,
+			}
+		}
+
 		throw new Error(`Unsupported SQL in MemorySqlExecutor.runAsync: ${normalized}`)
 	}
 
@@ -756,6 +769,18 @@ export class MemorySqlExecutor implements SqlExecutor {
 		if (/FROM teeth/i.test(normalized)) {
 			const rows = this.queryTeeth(normalized, params)
 			return (rows[0] as T) ?? null
+		}
+
+		if (/^SELECT COUNT\(\*\) AS c FROM moments WHERE photo_uri = \?$/i.test(normalized)) {
+			const c = this.tables.moments.filter((r) => r.photo_uri === params[0]).length
+			return { c } as T
+		}
+
+		if (/^SELECT COUNT\(\*\) AS c FROM event_milestone WHERE photo_uri = \?$/i.test(normalized)) {
+			const c = this.tables.event_milestone.filter(
+				(r) => r.photo_uri === params[0],
+			).length
+			return { c } as T
 		}
 
 		if (/FROM moments/i.test(normalized)) {
@@ -890,6 +915,48 @@ export class MemorySqlExecutor implements SqlExecutor {
 
 		if (/FROM teeth/i.test(normalized)) {
 			return this.queryTeeth(normalized, params) as T[]
+		}
+
+		if (/^SELECT photo_uri AS uri FROM moments WHERE child_id = \? AND photo_uri IS NOT NULL$/i.test(normalized)) {
+			return this.tables.moments
+				.filter((r) => r.child_id === params[0] && r.photo_uri != null)
+				.map((r) => ({ uri: r.photo_uri })) as T[]
+		}
+
+		if (/SELECT m\.photo_uri AS uri[\s\S]*FROM event_milestone m[\s\S]*e\.child_id = \?/i.test(normalized)) {
+			const childId = params[0]
+			const eventIds = new Set(
+				this.tables.events
+					.filter((e) => e.child_id === childId)
+					.map((e) => String(e.id)),
+			)
+			return this.tables.event_milestone
+				.filter(
+					(m) =>
+						eventIds.has(String(m.event_id)) && m.photo_uri != null,
+				)
+				.map((m) => ({ uri: m.photo_uri })) as T[]
+		}
+
+		if (/^SELECT file_uri AS uri FROM health_attachments WHERE child_id = \?$/i.test(normalized)) {
+			return this.tables.health_attachments
+				.filter((r) => r.child_id === params[0] && r.file_uri != null)
+				.map((r) => ({ uri: r.file_uri })) as T[]
+		}
+
+		if (/SELECT s\.photo_uri AS uri[\s\S]*FROM event_symptom s[\s\S]*e\.child_id = \?/i.test(normalized)) {
+			const childId = params[0]
+			const eventIds = new Set(
+				this.tables.events
+					.filter((e) => e.child_id === childId)
+					.map((e) => String(e.id)),
+			)
+			return this.tables.event_symptom
+				.filter(
+					(s) =>
+						eventIds.has(String(s.event_id)) && s.photo_uri != null,
+				)
+				.map((s) => ({ uri: s.photo_uri })) as T[]
 		}
 
 		if (/FROM moments/i.test(normalized)) {
@@ -1700,6 +1767,10 @@ export class MemorySqlExecutor implements SqlExecutor {
 		this.tables.reminders = this.tables.reminders.filter(
 			(row) => row.child_id !== childId,
 		)
+		this.tables.custom_event_definitions =
+			this.tables.custom_event_definitions.filter(
+				(row) => row.child_id !== childId,
+			)
 	}
 
 	private querySymptomJoins (sql: string, params: SqlParam[]): Row[] {

@@ -101,8 +101,9 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 		const healthDocs = getHealthDocumentStorage()
 		const reminders = new ReminderRepository(db)
 		const feeding = new FeedingRepository(db)
+		const childrenRepo = new ChildRepository(db)
 		return {
-			childrenRepo: new ChildRepository(db),
+			childrenRepo,
 			events: new EventRepository(db),
 			sleep: new SleepRepository(db),
 			feeding,
@@ -117,7 +118,11 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 			doctorVisits: new DoctorVisitRepository(db),
 			healthAttachments: new HealthAttachmentRepository(db, healthDocs),
 			reminders,
-			reminderService: new ReminderService({ reminders, feeding }),
+			reminderService: new ReminderService({
+				reminders,
+				feeding,
+				children: childrenRepo,
+			}),
 			settings: new SettingsRepository(db),
 		}
 	}, [db])

@@ -67,6 +67,11 @@ export default function MoreScreen () {
 					subtitle="Температура, симптомы, лекарства и визиты"
 				/>
 				<MoreLink
+					href={'/children' as Href}
+					title="Мои дети"
+					subtitle="Профили, переключение и добавление ребёнка"
+				/>
+				<MoreLink
 					href="/profile"
 					title="Профиль малыша"
 					subtitle={

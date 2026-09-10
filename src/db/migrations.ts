@@ -419,6 +419,21 @@ CREATE INDEX idx_reminders_type
 	ON reminders(child_id, type);
 `,
 	},
+	{
+		version: 9,
+		name: 'multi_child_cleanup_indexes',
+		sql: `
+-- Profile / multi-child performance helpers (Phase 11).
+-- custom_event_definitions.child_id already exists (v4); cleanup on delete is
+-- handled in ChildLifecycleService because adding FK to an old table is unsafe.
+
+CREATE INDEX IF NOT EXISTS idx_custom_defs_child_id
+	ON custom_event_definitions(child_id);
+
+CREATE INDEX IF NOT EXISTS idx_reminders_child_type_enabled
+	ON reminders(child_id, type, enabled);
+`,
+	},
 ]
 
 export const LATEST_SCHEMA_VERSION =

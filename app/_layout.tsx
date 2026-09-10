@@ -99,6 +99,18 @@ function RootNavigator () {
 					options={{ title: 'Профиль малыша', presentation: 'card' }}
 				/>
 				<Stack.Screen
+					name="children/index"
+					options={{ title: 'Мои дети', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="children/new"
+					options={{ title: 'Добавить ребёнка', presentation: 'card' }}
+				/>
+				<Stack.Screen
+					name="children/[id]"
+					options={{ title: 'Профиль ребёнка', presentation: 'card' }}
+				/>
+				<Stack.Screen
 					name="sleep/manual"
 					options={{ title: 'Добавить сон', presentation: 'card' }}
 				/>

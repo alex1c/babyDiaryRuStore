@@ -8,6 +8,7 @@ import {
 	createFilePhotoStorage,
 	HEALTH_DOCS_SUBDIR,
 	MOMENTS_SUBDIR,
+	PROFILE_PHOTOS_SUBDIR,
 	type PhotoStorage,
 } from './photoStorage'
 
@@ -40,4 +41,9 @@ export function getAppPhotoStorage (): PhotoStorage {
 /** Health symptom/visit attachments under documentDirectory/health-documents/. */
 export function getHealthDocumentStorage (): PhotoStorage {
 	return getOrCreate(HEALTH_DOCS_SUBDIR)
+}
+
+/** Child profile avatars under documentDirectory/profile-photos/. */
+export function getProfilePhotoStorage (): PhotoStorage {
+	return getOrCreate(PROFILE_PHOTOS_SUBDIR)
 }

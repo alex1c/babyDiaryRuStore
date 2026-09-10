@@ -27,6 +27,8 @@ export interface ChildFormValues {
 	weightKgText: string
 	/** Raw height text from the form (cm). */
 	heightCmText: string
+	/** Optional managed profile photo URI. */
+	photoUri: string | null
 }
 
 export interface ChildFormParsed {
@@ -36,6 +38,7 @@ export interface ChildFormParsed {
 	sex: ChildSex | null
 	birthWeightGrams: number | null
 	birthHeightCm: number | null
+	photoUri: string | null
 }
 
 export interface ValidationResult {
@@ -180,6 +183,7 @@ export function validateChildForm (
 		sex: values.sex,
 		birthWeightGrams: weight.grams,
 		birthHeightCm: height.cm,
+		photoUri: values.photoUri,
 	}
 
 	return { ok: true, errors: [], parsed }
@@ -193,6 +197,7 @@ export function toCreateChildInput (parsed: ChildFormParsed): CreateChildInput {
 		sex: parsed.sex,
 		birthWeightGrams: parsed.birthWeightGrams,
 		birthHeightCm: parsed.birthHeightCm,
+		photoUri: parsed.photoUri,
 		isActive: true,
 	}
 }

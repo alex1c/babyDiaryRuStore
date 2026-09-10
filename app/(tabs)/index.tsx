@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { ActiveBreastfeedingCard } from '@/src/components/ActiveBreastfeedingCard'
 import { BannerAdSlot } from '@/src/components/BannerAdSlot'
+import { ChildSwitcherSheet } from '@/src/components/ChildSwitcherSheet'
 import {
 	LightweightToast,
 	useLightweightToast,
@@ -29,6 +30,7 @@ import { QuickActions, type QuickActionId } from '@/src/components/QuickActions'
 import { SleepStatusCard } from '@/src/components/SleepStatusCard'
 import { SmartTodayCard } from '@/src/components/SmartTodayCard'
 import { StatusCard } from '@/src/components/StatusCard'
+import { TodayChildHeader } from '@/src/components/TodayChildHeader'
 import { TodaySummary } from '@/src/components/TodaySummary'
 import { useActiveChild } from '@/src/context/ActiveChildContext'
 import { useDatabase } from '@/src/context/DatabaseContext'
@@ -61,7 +63,14 @@ import { spacing, typography } from '@/src/theme/tokens'
 export default function TodayScreen () {
 	const { colors } = useAppTheme()
 	const router = useRouter()
-	const { activeChild, loading: childLoading } = useActiveChild()
+	const {
+		activeChild,
+		activeChildId,
+		children: childrenList,
+		loading: childLoading,
+		setActiveChildId,
+		refresh: refreshActiveChild,
+	} = useActiveChild()
 	const { sleep, feeding, diaper, quickEvents, reminders, reminderService } =
 		useDatabase()
 	const { message, showToast } = useLightweightToast()
@@ -77,6 +86,7 @@ export default function TodayScreen () {
 		[],
 	)
 	const [moreOpen, setMoreOpen] = useState(false)
+	const [switcherOpen, setSwitcherOpen] = useState(false)
 	const [busy, setBusy] = useState(false)
 	const [loading, setLoading] = useState(true)
 
@@ -393,17 +403,10 @@ export default function TodayScreen () {
 				contentContainerStyle={styles.content}
 				showsVerticalScrollIndicator={false}
 			>
-				<View style={styles.header}>
-					<Text
-						style={[styles.name, { color: colors.text }]}
-						accessibilityRole="header"
-					>
-						{sleepModel.childName}
-					</Text>
-					<Text style={[styles.age, { color: colors.textSecondary }]}>
-						{sleepModel.ageLabel}
-					</Text>
-				</View>
+				<TodayChildHeader
+					child={activeChild}
+					onPress={() => setSwitcherOpen(true)}
+				/>
 
 				{smartHint ? <SmartTodayCard hint={smartHint} /> : null}
 
@@ -517,6 +520,28 @@ export default function TodayScreen () {
 						`/event/new?kind=custom&definitionId=${definitionId}` as Href,
 					)
 				}
+			/>
+			<ChildSwitcherSheet
+				visible={switcherOpen}
+				childrenList={childrenList}
+				activeChildId={activeChildId}
+				onClose={() => setSwitcherOpen(false)}
+				onSelect={(id) => {
+					void (async () => {
+						if (id === activeChildId) {
+							return
+						}
+						setLoading(true)
+						setSleepModel(null)
+						setFeedingModel(null)
+						setDiaperModel(null)
+						setSmartHint(null)
+						await setActiveChildId(id)
+						await refreshActiveChild()
+						await refresh()
+					})()
+				}}
+				onAddChild={() => router.push('/children/new' as Href)}
 			/>
 			<LightweightToast message={message} />
 		</SafeAreaView>

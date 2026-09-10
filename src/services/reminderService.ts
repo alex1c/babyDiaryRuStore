@@ -5,6 +5,7 @@
 
 import {
 	buildReminderNotificationBody,
+	buildReminderNotificationTitle,
 } from '../domain/reminderLabels'
 import type {
 	CreateReminderInput,
@@ -15,6 +16,7 @@ import type {
 import { isValidTimeLocal } from '../models/reminder'
 import type { ReminderRepository } from '../repositories/reminderRepository'
 import type { FeedingRepository } from '../repositories/feedingRepository'
+import type { ChildRepository } from '../repositories/childRepository'
 import { parseOffsetDateTime, toOffsetDateTime } from '../utils/datetime'
 import {
 	getNotificationScheduler,
@@ -64,17 +66,20 @@ export function serializePlatformNotificationIds (
 export interface ReminderServiceDeps {
 	reminders: ReminderRepository
 	feeding: FeedingRepository
+	children?: ChildRepository | null
 	scheduler?: NotificationScheduler
 }
 
 export class ReminderService {
 	private readonly reminders: ReminderRepository
 	private readonly feeding: FeedingRepository
+	private readonly children: ChildRepository | null
 	private readonly scheduler: NotificationScheduler
 
 	constructor (deps: ReminderServiceDeps) {
 		this.reminders = deps.reminders
 		this.feeding = deps.feeding
+		this.children = deps.children ?? null
 		this.scheduler = deps.scheduler ?? getNotificationScheduler()
 	}
 
@@ -280,9 +285,10 @@ export class ReminderService {
 			})
 		}
 
+		const childName = await this.resolveChildName(reminder.childId)
 		const content = {
-			title: reminder.title,
-			body: buildReminderNotificationBody(reminder),
+			title: buildReminderNotificationTitle(reminder, childName),
+			body: buildReminderNotificationBody(reminder, childName),
 			data: { reminderId: reminder.id, childId: reminder.childId },
 		}
 
@@ -297,6 +303,14 @@ export class ReminderService {
 			platformNotificationId: serializePlatformNotificationIds(platformIds),
 			fireAt: reminder.fireAt,
 		})
+	}
+
+	private async resolveChildName (childId: string): Promise<string | null> {
+		if (!this.children) {
+			return null
+		}
+		const child = await this.children.getById(childId)
+		return child?.name ?? null
 	}
 }
 
