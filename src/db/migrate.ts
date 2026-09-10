@@ -29,6 +29,23 @@ export async function getUserVersion (db: SqlExecutor): Promise<number> {
 export async function migrateDatabase (
 	db: SqlExecutor,
 ): Promise<MigrationResult> {
+	return migrateDatabaseTo(db, LATEST_SCHEMA_VERSION)
+}
+
+/**
+ * Apply migrations until `targetVersion` (inclusive), never beyond.
+ * Used by restore to import a dump at its original schema, then upgrade.
+ */
+export async function migrateDatabaseTo (
+	db: SqlExecutor,
+	targetVersion: number,
+): Promise<MigrationResult> {
+	if (targetVersion < 0 || targetVersion > LATEST_SCHEMA_VERSION) {
+		throw new Error(
+			`Invalid migration target ${targetVersion} (app schema ${LATEST_SCHEMA_VERSION})`,
+		)
+	}
+
 	MIGRATIONS.forEach((migration, index) => {
 		const expectedVersion = index + 1
 		if (migration.version !== expectedVersion) {
@@ -47,17 +64,27 @@ export async function migrateDatabase (
 			`Database version ${fromVersion} is newer than app schema ${LATEST_SCHEMA_VERSION}`,
 		)
 	}
+	if (fromVersion > targetVersion) {
+		throw new Error(
+			`Database version ${fromVersion} is newer than restore target ${targetVersion}`,
+		)
+	}
 
 	for (const migration of MIGRATIONS) {
 		if (migration.version <= fromVersion) {
 			continue
+		}
+		if (migration.version > targetVersion) {
+			break
 		}
 
 		try {
 			// One transaction per migration so a failure rolls back cleanly.
 			await db.withTransactionAsync(async (transactionDb) => {
 				await transactionDb.execAsync(migration.sql)
-				await transactionDb.execAsync(`PRAGMA user_version = ${migration.version}`)
+				await transactionDb.execAsync(
+					`PRAGMA user_version = ${migration.version}`,
+				)
 
 				// schema_migrations exists after v1; record audit when available.
 				if (migration.version >= 1) {

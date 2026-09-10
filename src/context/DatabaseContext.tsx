@@ -64,6 +64,8 @@ interface DatabaseContextValue {
 	settings: SettingsRepository | null
 	themePreference: ThemePreference
 	setThemePreferenceState: (preference: ThemePreference) => void
+	/** Close/reopen DB after restore and refresh repositories. */
+	reloadDatabase: () => Promise<void>
 }
 
 const DatabaseContext = createContext<DatabaseContextValue | null>(null)
@@ -168,6 +170,28 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 		})
 	}, [ready, repos.reminderService])
 
+	const reloadDatabase = useMemo(() => {
+		return async (): Promise<void> => {
+			setReady(false)
+			try {
+				const database = await getDatabase()
+				const settingsRepo = new SettingsRepository(database)
+				const appSettings = await settingsRepo.get()
+				setDb(database)
+				setThemePreferenceState(appSettings.themePreference)
+				setError(null)
+				setReady(true)
+			} catch (err) {
+				logger.error('Failed to reload database', err)
+				setError(
+					err instanceof Error
+						? err.message
+						: 'Не удалось перезагрузить базу данных',
+				)
+			}
+		}
+	}, [])
+
 	const value: DatabaseContextValue = {
 		ready,
 		error,
@@ -191,6 +215,7 @@ export function DatabaseProvider ({ children }: { children: ReactNode }) {
 		settings: repos.settings,
 		themePreference,
 		setThemePreferenceState,
+		reloadDatabase,
 	}
 
 	if (error) {

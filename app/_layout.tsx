@@ -175,6 +175,10 @@ function RootNavigator () {
 					options={{ title: 'Настройки', presentation: 'card' }}
 				/>
 				<Stack.Screen
+					name="backup"
+					options={{ title: 'Резервная копия', presentation: 'card' }}
+				/>
+				<Stack.Screen
 					name="training"
 					options={{ title: 'Обучение', presentation: 'card' }}
 				/>

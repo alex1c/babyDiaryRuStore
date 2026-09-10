@@ -81,6 +81,11 @@ export default function MoreScreen () {
 					}
 				/>
 				<MoreLink
+					href={'/backup' as Href}
+					title="Резервная копия"
+					subtitle="Экспорт и восстановление дневника"
+				/>
+				<MoreLink
 					href="/settings"
 					title="Настройки"
 					subtitle="Тема, уведомления, backup и другое"

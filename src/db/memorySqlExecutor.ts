@@ -683,6 +683,17 @@ export class MemorySqlExecutor implements SqlExecutor {
 			}
 		}
 
+		const clearMatch = normalized.match(/^DELETE FROM (\w+)$/i)
+		if (clearMatch) {
+			const table = clearMatch[1]
+			if (!table || !isTableName(table)) {
+				throw new Error(`Unknown table: ${table}`)
+			}
+			const before = this.tables[table].length
+			this.tables[table] = []
+			return { changes: before, lastInsertRowId: 0 }
+		}
+
 		throw new Error(`Unsupported SQL in MemorySqlExecutor.runAsync: ${normalized}`)
 	}
 
@@ -1064,6 +1075,45 @@ export class MemorySqlExecutor implements SqlExecutor {
 					String(b.start_at).localeCompare(String(a.start_at)),
 				)
 				.slice(0, typeof limit === 'number' ? limit : undefined) as T[]
+		}
+
+		const selectAll = normalized.match(/^SELECT \* FROM (\w+)$/i)
+		if (selectAll) {
+			const table = selectAll[1]
+			if (!table || !isTableName(table)) {
+				throw new Error(`Unknown table: ${table}`)
+			}
+			return this.tables[table].map((r) => ({ ...r })) as T[]
+		}
+
+		if (/^SELECT photo_uri AS uri FROM children WHERE photo_uri IS NOT NULL$/i.test(normalized)) {
+			return this.tables.children
+				.filter((r) => r.photo_uri != null)
+				.map((r) => ({ uri: r.photo_uri })) as T[]
+		}
+
+		if (/^SELECT photo_uri AS uri FROM moments WHERE photo_uri IS NOT NULL$/i.test(normalized)) {
+			return this.tables.moments
+				.filter((r) => r.photo_uri != null)
+				.map((r) => ({ uri: r.photo_uri })) as T[]
+		}
+
+		if (/^SELECT photo_uri AS uri FROM event_milestone WHERE photo_uri IS NOT NULL$/i.test(normalized)) {
+			return this.tables.event_milestone
+				.filter((r) => r.photo_uri != null)
+				.map((r) => ({ uri: r.photo_uri })) as T[]
+		}
+
+		if (/^SELECT photo_uri AS uri FROM event_symptom WHERE photo_uri IS NOT NULL$/i.test(normalized)) {
+			return this.tables.event_symptom
+				.filter((r) => r.photo_uri != null)
+				.map((r) => ({ uri: r.photo_uri })) as T[]
+		}
+
+		if (/^SELECT file_uri AS uri FROM health_attachments WHERE file_uri IS NOT NULL$/i.test(normalized)) {
+			return this.tables.health_attachments
+				.filter((r) => r.file_uri != null)
+				.map((r) => ({ uri: r.file_uri })) as T[]
 		}
 
 		return []

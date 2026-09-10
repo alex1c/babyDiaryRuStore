@@ -1,5 +1,5 @@
 /**
- * Settings — theme + links to profile and future sections.
+ * Settings — theme + links to profile, reminders, backup.
  */
 
 import { Link, type Href } from 'expo-router'
@@ -15,12 +15,6 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 	{ value: 'light', label: 'Светлая' },
 	{ value: 'dark', label: 'Тёмная' },
 ]
-
-const PLACEHOLDER_SECTIONS = [
-	{ title: 'Резервная копия', hint: 'Экспорт данных — позже' },
-	{ title: 'Конфиденциальность', hint: 'Локальное хранение на устройстве' },
-	{ title: 'О приложении', hint: 'Дневник малыша' },
-] as const
 
 export default function SettingsScreen () {
 	const { colors, preference, setPreference } = useAppTheme()
@@ -107,22 +101,51 @@ export default function SettingsScreen () {
 				</Pressable>
 			</Link>
 
-			{PLACEHOLDER_SECTIONS.map((section) => (
-				<View
-					key={section.title}
+			<Link href={'/backup' as Href} asChild>
+				<Pressable
 					style={[
 						styles.card,
 						{ backgroundColor: colors.surface, borderColor: colors.border },
 					]}
+					accessibilityRole="button"
+					accessibilityLabel="Резервная копия"
 				>
 					<Text style={[styles.cardTitle, { color: colors.text }]}>
-						{section.title}
+						Резервная копия
 					</Text>
 					<Text style={[styles.cardHint, { color: colors.textSecondary }]}>
-						{section.hint}
+						Экспорт и восстановление дневника
 					</Text>
-				</View>
-			))}
+				</Pressable>
+			</Link>
+
+			<View
+				style={[
+					styles.card,
+					{ backgroundColor: colors.surface, borderColor: colors.border },
+				]}
+			>
+				<Text style={[styles.cardTitle, { color: colors.text }]}>
+					Конфиденциальность
+				</Text>
+				<Text style={[styles.cardHint, { color: colors.textSecondary }]}>
+					Локальное хранение на устройстве
+				</Text>
+			</View>
+
+			<View
+				style={[
+					styles.card,
+					{ backgroundColor: colors.surface, borderColor: colors.border },
+				]}
+			>
+				<Text style={[styles.cardTitle, { color: colors.text }]}>
+					О приложении
+				</Text>
+				<Text style={[styles.cardHint, { color: colors.textSecondary }]}>
+					Дневник малыша
+				</Text>
+			</View>
 		</ScrollView>
 	)
 }
