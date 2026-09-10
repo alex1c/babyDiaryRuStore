@@ -161,7 +161,7 @@ export default function SettingsScreen () {
 					О приложении
 				</Text>
 				<Text style={[styles.cardHint, { color: colors.textSecondary }]}>
-					Дневник малыша
+					Гнёздышко — дневник малыша
 				</Text>
 			</View>
 		</ScrollView>

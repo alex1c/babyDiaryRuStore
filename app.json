@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Дневник малыша",
+    "name": "Гнёздышко — дневник малыша",
     "slug": "baby-diary",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -32,6 +32,7 @@
     "plugins": [
       "expo-router",
       "expo-sqlite",
+      "./plugins/withYandexMobileAds",
       [
         "expo-splash-screen",
         {

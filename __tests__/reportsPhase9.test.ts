@@ -36,6 +36,10 @@ import {
 	resetPdfAdSessionForTests,
 	runAfterFreshPdfGenerated,
 } from '../src/services/pdfAdFlow'
+import {
+	resetInterstitialBridgeStateForTests,
+	setInterstitialBridgeForTests,
+} from '../src/ads/InterstitialService'
 import { ChildRepository } from '../src/repositories/childRepository'
 import { DiaperRepository } from '../src/repositories/diaperRepository'
 import { DoctorVisitRepository } from '../src/repositories/doctorVisitRepository'
@@ -305,13 +309,21 @@ describe('pdf export storage', () => {
 		expect(deleteNames).toHaveLength(5)
 	})
 
-	it('ad flow marks session once and never blocks', async () => {
+	it('ad flow marks session once after a successful show and never blocks', async () => {
 		resetPdfAdSessionForTests()
+		resetInterstitialBridgeStateForTests()
+		setInterstitialBridgeForTests({
+			initialize: async () => undefined,
+			preload: async () => undefined,
+			showWithTimeout: async () => 'shown',
+		})
 		expect(hasPdfInterstitialBeenShownThisSession()).toBe(false)
 		await runAfterFreshPdfGenerated()
 		expect(hasPdfInterstitialBeenShownThisSession()).toBe(true)
 		await runAfterFreshPdfGenerated()
 		expect(hasPdfInterstitialBeenShownThisSession()).toBe(true)
+		setInterstitialBridgeForTests(null)
+		resetInterstitialBridgeStateForTests()
 	})
 })
 

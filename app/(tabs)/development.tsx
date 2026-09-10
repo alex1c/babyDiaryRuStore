@@ -442,7 +442,7 @@ export default function DevelopmentScreen () {
 					</>
 				)}
 
-				<BannerAdSlot />
+				<BannerAdSlot placement="development" />
 			</ScrollView>
 		</SafeAreaView>
 	)

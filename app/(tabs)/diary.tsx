@@ -516,7 +516,7 @@ export default function DiaryScreen () {
 						onPress={() => router.push(item.href as Href)}
 					/>
 				)}
-				ListFooterComponent={<BannerAdSlot />}
+				ListFooterComponent={<BannerAdSlot placement="diary" />}
 			/>
 
 			{pickerOpen ? (

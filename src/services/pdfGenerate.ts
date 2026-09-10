@@ -1,12 +1,13 @@
 /**
  * PDF generation + share using expo-print / expo-sharing (local only).
  *
- * Ad / interstitial insertion contract (monetization later — do not change call sites):
- * 1. At most one interstitial per app session after a *fresh* PDF generation.
- * 2. Never delay returning the PDF if an ad is not loaded.
- * 3. Re-opening an already created PDF file: no ad.
- * 4. Share / Open actions on the ready screen: no second ad.
- * 5. Never embed ads inside the PDF content itself.
+ * Ad / interstitial insertion contract:
+ * 1. At most one interstitial per app session after a *successful show*.
+ * 2. Never delay PDF file creation for ads — file is written first.
+ * 3. After write, await a bounded interstitial attempt, then return to UI.
+ * 4. Re-opening an already created PDF file: no ad.
+ * 5. Share / Open actions on the ready screen: no second ad.
+ * 6. Never embed ads inside the PDF content itself.
  */
 
 import * as FileSystem from 'expo-file-system/legacy'
@@ -81,12 +82,14 @@ async function generateAndStorePdf (
 	await softCleanupExports(exportsDir)
 
 	if (isFreshGeneration) {
-		// Non-blocking ad insertion point — must not delay PDF readiness.
-		void runAfterFreshPdfGenerated().catch((err) => {
+		// Await bounded interstitial attempt; PDF file already exists on disk.
+		try {
+			await runAfterFreshPdfGenerated()
+		} catch (err) {
 			logger.warn('pdf ad hook failed', {
 				error: err instanceof Error ? err.message : String(err),
 			})
-		})
+		}
 	}
 
 	return { uri: dest, fileName, isFreshGeneration }

@@ -521,7 +521,7 @@ export default function TodayScreen () {
 				) : null}
 
 				<TodaySummary rows={summaryRows} title="Сегодня" />
-				<BannerAdSlot />
+				<BannerAdSlot placement="today" />
 			</ScrollView>
 			<MoreActionsSheet
 				visible={moreOpen}

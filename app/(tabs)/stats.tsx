@@ -210,7 +210,7 @@ export default function StatsScreen () {
 					</Pressable>
 				</Link>
 
-				<BannerAdSlot />
+				<BannerAdSlot placement="statistics" />
 			</ScrollView>
 		</SafeAreaView>
 	)

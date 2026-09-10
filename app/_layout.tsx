@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 
 import { AppErrorBoundary } from '@/src/components/AppErrorBoundary'
+import { AdsProvider } from '@/src/ads/AdsProvider'
 import {
 	ActiveChildProvider,
 	useActiveChild,
@@ -280,9 +281,11 @@ export default function RootLayout () {
 						<DatabaseProvider>
 							<ThemeSync>
 								<ActiveChildProvider>
-									<OnboardingGate>
-										<RootNavigator />
-									</OnboardingGate>
+									<AdsProvider>
+										<OnboardingGate>
+											<RootNavigator />
+										</OnboardingGate>
+									</AdsProvider>
 								</ActiveChildProvider>
 							</ThemeSync>
 						</DatabaseProvider>

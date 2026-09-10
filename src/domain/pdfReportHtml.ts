@@ -87,7 +87,7 @@ export function buildPeriodPdfHtml (input: PdfReportHtmlInput): string {
 		parts.push(buildChronologySection(chronology))
 	}
 
-	parts.push(`<p class="footer">Дневник малыша — локальный отчёт, без медицинских заключений.</p>`)
+	parts.push(`<p class="footer">Гнёздышко — локальный отчёт, без медицинских заключений.</p>`)
 	parts.push(`</body></html>`)
 	return parts.join('')
 }

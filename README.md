@@ -1,4 +1,6 @@
-# Дневник малыша
+# Гнёздышко — дневник малыша
+
+Offline-first baby diary for Android / RuStore (`com.calculatorplatform.babydiary`).
 
 Offline-first дневник для родителей малыша (Expo / React Native).
 
