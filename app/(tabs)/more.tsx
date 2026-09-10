@@ -22,10 +22,10 @@ function MoreLink ({ href, title, subtitle }: MoreLinkProps) {
 	return (
 		<Link href={href} asChild>
 			<Pressable
-				style={[
+				style={StyleSheet.flatten([
 					styles.row,
 					{ backgroundColor: colors.surface, borderColor: colors.border },
-				]}
+				])}
 				accessibilityRole="button"
 				accessibilityLabel={title}
 			>

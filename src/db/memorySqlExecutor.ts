@@ -1014,19 +1014,21 @@ export class MemorySqlExecutor implements SqlExecutor {
 
 		if (/^SELECT name FROM recent_foods WHERE child_id = \?/i.test(normalized)) {
 			const [childId, limit] = params
-			return [...this.tables.recent_foods]
-				.filter((r) => r.child_id === childId)
+			return this.tables.recent_foods
+				.map((row, index) => ({ row, index }))
+				.filter((r) => r.row.child_id === childId)
 				.sort((a, b) => {
-					const byTime = String(b.last_used_at).localeCompare(
-						String(a.last_used_at),
+					const byTime = String(b.row.last_used_at).localeCompare(
+						String(a.row.last_used_at),
 					)
 					if (byTime !== 0) {
 						return byTime
 					}
-					return Number(b.use_count) - Number(a.use_count)
+					const byCount = Number(b.row.use_count) - Number(a.row.use_count)
+					return byCount !== 0 ? byCount : b.index - a.index
 				})
 				.slice(0, typeof limit === 'number' ? limit : undefined)
-				.map((r) => ({ name: r.name })) as T[]
+				.map(({ row }) => ({ name: row.name })) as T[]
 		}
 
 		if (/^SELECT \* FROM children ORDER BY/i.test(normalized)) {

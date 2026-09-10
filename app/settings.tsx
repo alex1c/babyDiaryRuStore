@@ -67,10 +67,10 @@ export default function SettingsScreen () {
 
 			<Link href="/profile" asChild>
 				<Pressable
-					style={[
+					style={StyleSheet.flatten([
 						styles.card,
 						{ backgroundColor: colors.surface, borderColor: colors.border },
-					]}
+					])}
 					accessibilityRole="button"
 					accessibilityLabel="Профиль малыша"
 				>
@@ -85,10 +85,10 @@ export default function SettingsScreen () {
 
 			<Link href={'/reminders' as Href} asChild>
 				<Pressable
-					style={[
+					style={StyleSheet.flatten([
 						styles.card,
 						{ backgroundColor: colors.surface, borderColor: colors.border },
-					]}
+					])}
 					accessibilityRole="button"
 					accessibilityLabel="Напоминания"
 				>
@@ -103,10 +103,10 @@ export default function SettingsScreen () {
 
 			<Link href={'/backup' as Href} asChild>
 				<Pressable
-					style={[
+					style={StyleSheet.flatten([
 						styles.card,
 						{ backgroundColor: colors.surface, borderColor: colors.border },
-					]}
+					])}
 					accessibilityRole="button"
 					accessibilityLabel="Резервная копия"
 				>
@@ -121,10 +121,10 @@ export default function SettingsScreen () {
 
 			<Link href={'/training' as Href} asChild>
 				<Pressable
-					style={[
+					style={StyleSheet.flatten([
 						styles.card,
 						{ backgroundColor: colors.surface, borderColor: colors.border },
-					]}
+					])}
 					accessibilityRole="button"
 					accessibilityLabel="Обучение"
 				>

@@ -146,12 +146,12 @@ export default function ChildrenListScreen () {
 
 				<Link href={'/children/new' as Href} asChild>
 					<Pressable
-						style={[
+						style={StyleSheet.flatten([
 							styles.addBtn,
 							{
 								backgroundColor: colors.primary,
 							},
-						]}
+						])}
 						accessibilityRole="button"
 						accessibilityLabel="Добавить ребёнка"
 					>

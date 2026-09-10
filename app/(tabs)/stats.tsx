@@ -196,10 +196,10 @@ export default function StatsScreen () {
 
 				<Link href={'/reports' as Href} asChild>
 					<Pressable
-						style={[
+						style={StyleSheet.flatten([
 							styles.exportLink,
 							{ backgroundColor: colors.surface, borderColor: colors.border },
-						]}
+						])}
 					>
 						<Text style={{ color: colors.text, ...typography.subtitle }}>
 							Отчёты и экспорт

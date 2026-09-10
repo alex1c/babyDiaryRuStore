@@ -622,7 +622,7 @@ export class FeedingRepository {
 		const rows = await this.db.getAllAsync<{ name: string }>(
 			`SELECT name FROM recent_foods
 			 WHERE child_id = ?
-			 ORDER BY last_used_at DESC, use_count DESC
+			 ORDER BY last_used_at DESC, use_count DESC, rowid DESC
 			 LIMIT ?`,
 			childId,
 			limit,
